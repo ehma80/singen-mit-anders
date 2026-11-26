@@ -47,3 +47,45 @@ def encrypt_tree(path, key, salt, skip=('.bin',)):
             fp = os.path.join(root, f)
             open(fp + '.bin', 'wb').write(encrypt(open(fp, 'rb').read(), key, salt))
             os.unlink(fp)
+
+
+# ---- public-key drop box: lets someone who does NOT know the choir password add files ----
+# The site holds a public key (pubkey.pem, public) and the matching private key encrypted with the site key
+# (privkey.bin). Files encrypted to the public key ("*.pkenc") can only be opened by the build (which has the password).
+PKMAGIC = b'CHORPK1'
+
+
+def site_keypair(site, key, salt):
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives import serialization
+    pub_p, priv_p = os.path.join(site, 'pubkey.pem'), os.path.join(site, 'privkey.bin')
+    if os.path.exists(priv_p):
+        pem = AESGCM(key).decrypt(*(lambda b: (b[21:33], b[33:], None))(open(priv_p, 'rb').read()))
+        return serialization.load_pem_private_key(pem, password=None)
+    priv = rsa.generate_private_key(public_exponent=65537, key_size=3072)
+    pem = priv.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+    open(priv_p, 'wb').write(encrypt(pem, key, salt))
+    open(pub_p, 'wb').write(priv.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
+    return priv
+
+
+def _oaep():
+    from cryptography.hazmat.primitives.asymmetric import padding
+    from cryptography.hazmat.primitives import hashes
+    return padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+
+
+def pk_encrypt(data, pub_pem):
+    from cryptography.hazmat.primitives import serialization
+    pub = serialization.load_pem_public_key(pub_pem)
+    k, iv = os.urandom(32), os.urandom(12)
+    wk = pub.encrypt(k, _oaep())
+    return PKMAGIC + len(wk).to_bytes(2, 'big') + wk + iv + AESGCM(k).encrypt(iv, data, None)
+
+
+def pk_decrypt(blob, priv):
+    assert blob[:7] == PKMAGIC, 'keine Datei für den öffentlichen Schlüssel'
+    n = int.from_bytes(blob[7:9], 'big')
+    wk, rest = blob[9:9 + n], blob[9 + n:]
+    k = priv.decrypt(wk, _oaep())
+    return AESGCM(k).decrypt(rest[:12], rest[12:], None)
