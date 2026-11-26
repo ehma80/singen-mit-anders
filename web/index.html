@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Singen mit anders</title>
+<style>
+  :root { --bg:#f7f5f0; --card:#fff; --ink:#1d1d1f; --mute:#6b6b70; --line:#e4e1da; --acc:#2f5d8a; --warn:#b4532a; --ok:#2f7d4f;
+          --v0:#c0392b; --v1:#1f8a4c; --v2:#2363a8; --v3:#8a5a2f; --v4:#6b3f8a; }
+  :root[data-theme=dark] { --bg:#16171a; --card:#202226; --ink:#ececec; --mute:#a0a0a8; --line:#33363c; --acc:#7fb0e0; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg:#16171a; --card:#202226; --ink:#ececec; --mute:#a0a0a8; --line:#33363c; --acc:#7fb0e0; } }
+  * { box-sizing:border-box; min-width:0; }
+  [hidden] { display:none !important; }
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:980px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.4rem; margin:4px 0 2px; } .sub { color:var(--mute); font-size:.9rem; margin-bottom:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  button, select, input[type=number] { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 12px; }
+  button { cursor:pointer; min-height:40px; } button:hover { border-color:var(--acc); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+  button.primary { background:var(--acc); color:#fff; border-color:var(--acc); font-weight:600; min-width:120px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .voice { display:grid; grid-template-columns: 14px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .voice:first-child { border-top:0; }
+  .dot { width:12px; height:12px; border-radius:50%; }
+  .vname { font-weight:600; } .vline { color:var(--mute); font-size:.92rem; min-height:1.4em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vline b { color:var(--ink); background:color-mix(in srgb, var(--acc) 22%, transparent); border-radius:4px; padding:0 2px; }
+  .vctl { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+  .vctl button { white-space:nowrap; }
+  @media (max-width:600px) { .vctl { grid-column: 2 / -1; justify-content:flex-start; } .vol { flex:1; } }
+  .toggle.on { background:var(--warn); color:#fff; border-color:var(--warn); }
+  .toggle.pon { background:var(--acc); color:#fff; border-color:var(--acc); }
+  input[type=range] { accent-color:var(--acc); }
+  .vol { width:90px; } #pos { width:100%; }
+  .meas { font-variant-numeric:tabular-nums; color:var(--mute); }
+  .hint { color:var(--mute); font-size:.88rem; } .err { color:var(--warn); font-weight:600; }
+  label.small { font-size:.9rem; color:var(--mute); display:flex; gap:6px; align-items:center; }
+  input[type=number] { width:68px; padding:6px 8px; }
+  .muted .vname, .muted .vline { opacity:.55; }
+  a.btnlink { display:inline-block; margin:6px 0; padding:9px 14px; border-radius:8px; background:var(--acc); color:#fff; text-decoration:none; font-weight:600; }
+  .songs { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin-top:10px; }
+  .song { text-align:left; padding:10px 12px; } .song small { display:block; color:var(--mute); }
+  .song.cur { border-color:var(--acc); box-shadow:0 0 0 2px color-mix(in srgb, var(--acc) 35%, transparent); }
+  #drop { margin-top:10px; }
+  .smallbtn { font-size:.85rem; padding:5px 11px; border-radius:999px; cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--ink); display:inline-flex; align-items:center; }
+  .smallbtn:hover { border-color:var(--acc); }
+  #upHint { margin:8px 0 0; text-align:right; }
+  /* notation */
+  #notation { max-height:62vh; overflow-y:auto; background:#fff; border-radius:8px; color:#000; position:relative; }
+  #notation svg { display:block; width:100%; height:auto; }
+  #notation g.note, #notation g.measure { cursor:pointer; }
+  #notation g.note.hl0, #notation g.note.hl0 * { fill:var(--v0) !important; stroke:var(--v0); }
+  #notation g.note.hl1, #notation g.note.hl1 * { fill:var(--v1) !important; stroke:var(--v1); }
+  #notation g.note.hl2, #notation g.note.hl2 * { fill:var(--v2) !important; stroke:var(--v2); }
+  #notation g.note.hl3, #notation g.note.hl3 * { fill:var(--v3) !important; stroke:var(--v3); }
+  #notation g.note.hl4, #notation g.note.hl4 * { fill:var(--v4) !important; stroke:var(--v4); }
+  #notation g.syl.hls text, #notation g.syl.hls { font-weight:bold; fill:var(--ink) !important; }
+  #notation rect.marker { opacity:.5; mix-blend-mode:multiply; pointer-events:none; }
+  :root[data-theme=dark] #notation rect.marker { mix-blend-mode:normal; opacity:.45; }
+  /* entry counter (sticky, so it stays visible while reading the notes) */
+  #cue { position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:14px; padding:10px 14px; margin-bottom:12px;
+         border-radius:12px; background:var(--card); border:1px solid var(--line); box-shadow:0 2px 10px rgba(0,0,0,.08); min-height:58px; }
+  #cueNum { font-size:2.4rem; font-weight:800; min-width:1.4em; text-align:center; font-variant-numeric:tabular-nums; line-height:1; color:var(--mute); }
+  #cue.count #cueNum { color:var(--warn); }
+  #cue.sing #cueNum { color:var(--ok); }
+  #cueTxt { min-width:0; }
+  #cueMain { font-weight:700; font-size:1.05rem; }
+  #cueSub { color:var(--mute); font-size:.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .beats { display:flex; gap:5px; margin-left:auto; }
+  .beats span { width:12px; height:12px; border-radius:50%; background:var(--line); }
+  .beats span.on { background:var(--warn); }
+  .beats span.go { outline:2px solid var(--ok); outline-offset:1px; }
+#gate{position:fixed;inset:0;z-index:100;background:var(--bg,#fff);display:flex;align-items:center;justify-content:center;padding:20px}
+#gate form{max-width:340px;width:100%;text-align:center}#gate input{width:100%;font-size:18px;padding:10px;margin:8px 0;box-sizing:border-box}
+#gate button{font-size:17px;padding:10px 24px}
+  .brand { font-size:.8rem; font-weight:700; letter-spacing:.02em; color:var(--acc); margin-bottom:2px; }
+</style>
+</head>
+<body>
+<div id="gate" hidden><form id="gateForm"><h2>🎵 Singen mit anders</h2><p>Bitte das Chor-Passwort eingeben.</p>
+<input id="gatePw" type="password" autocomplete="current-password" placeholder="Passwort"><button type="submit">Öffnen</button>
+<p id="gateMsg" class="hint"></p><p class="hint">Das Passwort wird auf diesem Gerät gemerkt.</p></form></div>
+<main>
+  <div class="brand">🎵 Singen mit anders</div>
+  <h1 id="title">Singen mit anders</h1>
+  <div class="sub" id="subtitle">Noten hochladen, alle Stimmen anhören, eine Stimme ausschalten und selbst singen.</div>
+
+  <div class="card" id="libCard">
+    <div class="row" style="justify-content:space-between"><b>Bibliothek</b><span class="hint" id="libCount"></span></div>
+    <div class="songs" id="songs"><p class="hint">Lade Bibliothek …</p></div>
+    <div id="drop">
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <span id="upStatus" class="hint" style="margin-right:auto"></span>
+        <label class="smallbtn" id="upBtn" title="Noten als PDF (aus Sibelius, Finale, MuseScore …) oder MusicXML hinzufügen">➕ Stück hochladen<input type="file" id="file" accept=".pdf,.xml,.musicxml,.mxl" hidden></label>
+        <button class="smallbtn" id="upHelpBtn" type="button" aria-expanded="false" title="Hilfe zum Hochladen">?</button>
+      </div>
+      <p class="hint" id="upHint" hidden>Digital erzeugte PDFs (Sibelius, Finale, MuseScore …) werden direkt gelesen.</p>
+      <div id="pending"></div>
+    </div>
+  </div>
+
+  <div id="player" hidden>
+    <div id="cue"><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Wähle unten bei „Ich singe“ deine Stimme.</div></div><div class="beats" id="cueBeats"></div></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button class="primary" id="play">▶ Abspielen</button>
+          <button id="back" title="Zum Anfang bzw. Schleifenbeginn">⏮</button>
+          <span class="meas" id="measLbl">Takt 1 / 1</span>
+        </div>
+        <div class="row">
+          <label class="small">Tempo <select id="tempo"></select></label>
+          <label class="small" id="swingWrap"><input type="checkbox" id="swing"> Swing</label>
+          <label class="small">Klang <select id="style"><option value="chor">Chor (3 KI-Sänger je Stimme)</option><option value="solo">Solo (1 KI-Sänger)</option></select></label>
+          <label class="small"><input type="checkbox" id="countin" checked> Einzählen</label>
+        </div>
+      </div>
+      <input type="range" id="pos" min="1" max="2" step="0.01" value="1" style="margin-top:12px" aria-label="Position">
+      <div class="row" style="margin-top:8px">
+        <button id="giveBtn" title="Grundakkord und Anfangstöne jeder Stimme vorspielen">🎵 Töne angeben</button>
+        <label class="small"><input type="checkbox" id="giveAuto" checked> vor jedem Start</label>
+        <label class="small"><input type="checkbox" id="hum"> ansummen</label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="small"><input type="checkbox" id="loop"> Schleife von Takt</label>
+        <input type="number" id="loopA" min="1" value="1"> <span class="hint">bis</span>
+        <input type="number" id="loopB" min="1" value="4">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="small"><input type="checkbox" id="clickOn"> 🥁 Klick</label>
+        <select id="clickDiv" aria-label="Klick-Raster"><option value="1">jeder Schlag</option><option value="2">jeder 2. Schlag</option><option value="bar">nur Takt-Eins</option><option value="0.5">Achtel</option></select>
+        <label class="small">laut <input type="range" id="clickVol" min="0.1" max="1.5" step="0.05" value="0.7" style="width:90px" aria-label="Klick-Lautstärke"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="small" title="Zählt vor jedem Einsatz deiner Stimme (bei „Ich singe“) laut die Schläge des Takts vor, z. B. „drei, vier“."><input type="checkbox" id="cueSpeak" checked> 🗣 Einsätze vorzählen</label>
+        <label class="small">für <select id="cueVoice"></select></label>
+      </div>
+      <p id="status" class="hint" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px">
+        <span class="hint">Andere Stimmen (nicht deine):</span>
+        <div class="row"><button id="allPiano">alle Klavier</button><button id="allSing">alle gesungen</button></div>
+      </div>
+      <div id="voices"></div>
+    </div>
+
+    <div class="card">
+      <div id="notation"><p class="hint" style="padding:12px">Noten werden gesetzt …</p></div>
+      <p class="hint" style="margin:8px 0 0">Bei deiner Stimme („Ich singe“) wird die aktuelle Note wie mit einem Textmarker markiert. Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
+    </div>
+
+    <p class="hint" id="note"></p>
+  </div>
+</main>
+<script src="verovio-toolkit-wasm.js"></script>
+<script>
+{
+let STATIC = null;
+const LIBMODE = !!window.LIBRARY_MODE;
+const $ = id => document.getElementById(id);
+let score = null, ctx = null, master = null, buffers = [], gains = [], sources = [], tracks = [];
+let playing = false, startCtxTime = 0, startPosSec = 0, rafId = 0, schedTimer = 0, lastSched = 0;
+let curTempoPct = 100, tk = null, noteStaff = {}, noteBeat = {}, noteEls = [], hlIds = [], lastHlBeat = -1, lastPageTop = -1;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const COLORS = () => ['--v0','--v1','--v2','--v3','--v4'].map(css);
+const MSPB = 500; // Verovio default tempo 120 → 500 ms per beat
+const NAMES = ['C','Des','D','Es','E','F','Fis','G','As','A','B','H'];
+const noteName = m => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+
+// ---------- timing (mirrors server synth.time_map) ----------
+const tempoBpm = () => score.tempo * curTempoPct / 100;
+const useSwing = () => $('swing').checked;
+const BPM = () => score.beats || 4;
+function b2s(b) { if (useSwing()) { const f = (b * 4) % 2; if (Math.abs(f - 1) < 1e-6) b += 1 / 12; } return b * 60 / tempoBpm(); }
+function posToBeats(p) {
+  let b = p * tempoBpm() / 60;
+  if (useSwing()) { const e = Math.floor(b * 2) / 2, r = b - e, s1 = 0.25 + 1 / 12; b = r < s1 ? e + r * 0.25 / s1 : e + 0.25 + (r - s1) * 0.25 / (0.5 - s1); }
+  return b;
+}
+const measStartSec = m => b2s((m - 1) * BPM());
+const status = (t, err) => { $('status').textContent = t; $('status').className = err ? 'err' : 'hint'; };
+
+// ---------- password protection (GitHub Pages: every file is stored AES-GCM encrypted as *.bin) ----------
+const ENC = !!window.ENCRYPTED, MAGIC = 'CHOR1';
+let siteKey = null, cryptoCfg = null;
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64e = u => btoa(String.fromCharCode(...u));
+async function deriveKey(pw, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+async function decryptBlob(buf, key) {
+  const u = new Uint8Array(buf);
+  if (new TextDecoder().decode(u.slice(0, 5)) !== MAGIC) throw new Error('Format');
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(21, 33) }, key, u.slice(33));
+}
+async function encryptBlob(data, pw) { // own random salt, so the CI can decrypt with the password alone
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pw, salt, cryptoCfg ? cryptoCfg.iter : 150000);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data));
+  return new Blob([new TextEncoder().encode(MAGIC), salt, iv, ct]);
+}
+async function tryPassword(pw) {
+  const key = await deriveKey(pw, b64d(cryptoCfg.salt), cryptoCfg.iter);
+  try { const t = new TextDecoder().decode(await decryptBlob(b64d(cryptoCfg.check), key)); return t === 'chorprobe-ok' ? key : null; }
+  catch { return null; }
+}
+// fetch() replacement: in encrypted mode loads "<url>.bin" and returns the decrypted content as a Response
+async function cfetch(url) {
+  if (!ENC) return fetch(url);
+  const r = await fetch(url + '.bin');
+  if (!r.ok) return r;
+  return new Response(await decryptBlob(await r.arrayBuffer(), siteKey));
+}
+async function unlock() {
+  cryptoCfg = await (await fetch('crypto.json', { cache: 'no-cache' })).json();
+  try {
+    const saved = localStorage.getItem('chorKey');
+    if (saved) {
+      const key = await crypto.subtle.importKey('raw', b64d(saved), 'AES-GCM', true, ['encrypt', 'decrypt']);
+      const t = new TextDecoder().decode(await decryptBlob(b64d(cryptoCfg.check), key));
+      if (t === 'chorprobe-ok') { siteKey = key; return; }
+    }
+  } catch {}
+  const g = $('gate'); g.hidden = false; $('gatePw').focus();
+  await new Promise(done => {
+    $('gateForm').onsubmit = async ev => {
+      ev.preventDefault(); $('gateMsg').textContent = 'Prüfe …';
+      const pw = $('gatePw').value, key = await tryPassword(pw);
+      if (!key) { $('gateMsg').textContent = 'Das Passwort stimmt nicht.'; return; }
+      siteKey = key; sessionStorage.setItem('chorPw', pw);
+      try { localStorage.setItem('chorKey', b64e(new Uint8Array(await crypto.subtle.exportKey('raw', key)))); } catch {}
+      g.hidden = true; done();
+    };
+  });
+}
+
+// ---------- library ----------
+let library = [], curSongId = null;
+async function init() {
+  if (LIBMODE) $('swingWrap').hidden = true;
+  try { if (location.hash === '#chorleitung') localStorage.setItem('chorleitung', '1'); } catch {}
+  window.IS_LEAD = location.hash === '#chorleitung';
+  if (ENC) await unlock();
+  await loadLibrary();
+  const want = LIBMODE ? location.hash.slice(1).replace('chorleitung', '') : new URLSearchParams(location.search).get('id');
+  const pick = library.find(x => x.id === want) || library[0];
+  if (pick) await openSong(pick.id);
+  if (LIBMODE) initAssets();
+}
+async function loadLibrary() {
+  try {
+    const r = await cfetch(LIBMODE ? 'library.json' : 'api/library'); library = r.ok ? await r.json() : [];
+  } catch { library = []; }
+  renderLibrary();
+}
+function renderLibrary() {
+  $('libCount').textContent = library.length === 1 ? '1 Stück' : library.length + ' Stücke';
+  $('songs').innerHTML = library.length ? library.map(x => `<button class="song ${x.id === curSongId ? 'cur' : ''}" data-id="${esc(x.id)}">${esc(x.title)}<small>${esc(x.voices.join(' · '))} · ${x.measures} Takte${x.ready === false ? ' · wird eingesungen …' : ''}</small></button>`).join('')
+    : '<p class="hint">Noch keine Stücke.</p>';
+  $('songs').querySelectorAll('.song').forEach(b => b.onclick = () => openSong(b.dataset.id));
+}
+async function openSong(id) {
+  stop(); for (const k in humCache) delete humCache[k];
+  curSongId = id; renderLibrary();
+  if (LIBMODE) {
+    location.hash = id;
+    const base = 'songs/' + id + '/';
+    const sj = await (await cfetch(base + 'song.json')).json();
+    STATIC = { score: sj.score, tempos: sj.tempos, styles: true, xml: base + 'score.xml',
+      audio: (vi, pct, st) => `${base}audio_${st}_${pct}_${vi}.mp3`, hum: (vt, m) => `${base}hum_${vt}_${m}.mp3` };
+    const keep = +$('tempo').value || 100;
+    $('tempo').innerHTML = STATIC.tempos.map(p => `<option value="${p}">${p} %</option>`).join('');
+    curTempoPct = STATIC.tempos.includes(keep) ? keep : (STATIC.tempos.includes(100) ? 100 : STATIC.tempos[STATIC.tempos.length - 1]);
+    $('tempo').value = curTempoPct;
+    score = STATIC.score;
+  } else {
+    if (!$('tempo').options.length) $('tempo').innerHTML = [50, 60, 70, 80, 90, 100, 110].map(p => `<option value="${p}" ${p === 100 ? 'selected' : ''}>${p} %</option>`).join('');
+    const r = await fetch('api/score/' + id); if (!r.ok) return; score = await r.json();
+    history.replaceState(null, '', '?id=' + id);
+  }
+  startPosSec = 0;
+  await setupScore();
+}
+// In the published page, uploads are stored with the page; Claude then turns them into a sung piece.
+let assetsApi = null;
+async function initAssets() {
+  if (window.UPLOAD_URL) { // GitHub Pages: the choir director adds pieces by dropping PDFs into the "noten" folder
+    let lead = false;
+    try { lead = window.IS_LEAD || localStorage.getItem('chorleitung') === '1'; } catch { lead = !!window.IS_LEAD; }
+    if (!lead) { $('drop').hidden = true; return; }  // singers only see the library
+    if (ENC) {
+      $('upHint').innerHTML = `<b>So kommt ein neues Stück dazu:</b><br>1. Mit „➕ Stück hochladen“ die Noten-PDF auswählen – sie wird hier auf dem Gerät mit dem Chor-Passwort verschlüsselt und als „….enc“ gespeichert.<br>2. <a class="btnlink" href="${esc(window.UPLOAD_URL)}" target="_blank" rel="noopener">📤 Datei auf GitHub hochladen</a> – die .enc-Datei in das Feld ziehen und „Commit changes“ tippen.<br>Nach etwa 20–30 Minuten ist das Stück eingesungen (Seite neu laden). Die PDF selbst ist dort für niemanden lesbar.`;
+      return;
+    }
+    $('upBtn').hidden = true; $('upHint').hidden = false;
+    $('upHint').innerHTML = `<a class="btnlink" href="${esc(window.UPLOAD_URL)}" target="_blank" rel="noopener">📤 PDF auf GitHub hochladen</a><br>PDF in das Feld ziehen und unten auf „Commit changes“ tippen. Nach etwa 15–20 Minuten ist das Stück hier eingesungen in der Bibliothek (Seite neu laden).`;
+    return;
+  }
+  $('upHint').textContent = 'Die Datei wird hier gespeichert. Sag danach Claude im Chat Bescheid: Claude liest die Noten, lässt sie einsingen und nimmt das Stück in die Bibliothek auf.';
+  try { assetsApi = window.claude && await window.claude.use('assets'); } catch { assetsApi = null; }
+  if (!assetsApi) { $('upBtn').hidden = true; $('upHelpBtn').hidden = true; $('upHint').hidden = false; $('upHint').textContent = 'Zum Hochladen das neue Stück einfach im Chat an Claude schicken. Claude nimmt es dann in die Bibliothek auf.'; return; }
+  listPending();
+}
+async function listPending() {
+  try {
+    const { assets } = await assetsApi.list();
+    const done = new Set(library.flatMap(x => [x.source, ...(x.sources || [])]).filter(Boolean));
+    const pend = (assets || []).filter(a => !done.has(a.id) && /pdf|xml/.test(a.contentType || ''));
+    $('pending').innerHTML = pend.length ? '<p class="hint"><b>Wartet auf Einsingen:</b> ' + pend.map(a => esc(a.name || a.filename || a.id)).join(', ') + '</p>' : '';
+  } catch { $('pending').innerHTML = ''; }
+}
+
+$('upHelpBtn').onclick = () => { const h = $('upHint'); h.hidden = !h.hidden; $('upHelpBtn').setAttribute('aria-expanded', String(!h.hidden)); };
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (LIBMODE && ENC && window.UPLOAD_URL) {
+    let pw = sessionStorage.getItem('chorPw') || prompt('Chor-Passwort zum Verschlüsseln:');
+    if (!pw) { e.target.value = ''; return; }
+    if (!await tryPassword(pw)) { sessionStorage.removeItem('chorPw'); $('upStatus').textContent = 'Das Passwort stimmt nicht.'; $('upStatus').className = 'err'; e.target.value = ''; return; }
+    sessionStorage.setItem('chorPw', pw);
+    const blob = await encryptBlob(await f.arrayBuffer(), pw);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name + '.enc';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    $('upStatus').textContent = '„' + f.name + '.enc“ ist verschlüsselt und heruntergeladen. Jetzt unten auf „Datei auf GitHub hochladen“ tippen.'; $('upHint').hidden = false; $('upStatus').className = 'hint';
+    e.target.value = ''; return;
+  }
+  if (LIBMODE) {
+    if (!assetsApi) return;
+    $('upStatus').textContent = 'Lade hoch …'; $('upStatus').className = 'hint';
+    try {
+      await assetsApi.upload(new File([f], f.name, { type: f.type || 'application/pdf' }));
+      $('upStatus').textContent = '„' + f.name + '“ ist gespeichert. Sag jetzt Claude im Chat: „Bitte neues Stück einsingen.“';
+      listPending();
+    } catch (err) { $('upStatus').textContent = 'Hochladen hat nicht geklappt: ' + (err && err.message || err); $('upStatus').className = 'err'; }
+    e.target.value = ''; return;
+  }
+  $('upStatus').textContent = 'Lese Noten …'; $('upStatus').className = 'hint';
+  const fd = new FormData(); fd.append('file', f);
+  const r = await fetch('api/upload', { method: 'POST', body: fd });
+  if (!r.ok) { let m = 'Fehler'; try { m = (await r.json()).detail; } catch {} $('upStatus').textContent = m; $('upStatus').className = 'err'; return; }
+  const sc = await r.json();
+  $('upStatus').textContent = 'Erkannt: „' + sc.title + '“ mit ' + sc.voices.length + ' Stimmen und ' + sc.measures + ' Takten. Es ist jetzt in der Bibliothek; die Stimmen werden gerade eingesungen (einige Minuten).';
+  await loadLibrary();
+  const poll = setInterval(async () => { await loadLibrary(); const it = library.find(x => x.id === sc.id); if (it && it.ready) { clearInterval(poll); $('upStatus').textContent = '„' + sc.title + '“ ist fertig eingesungen.'; if (curSongId === sc.id) loadAudio(); } }, 10000);
+  await openSong(sc.id);
+});
+
+async function setupScore() {
+  $('title').textContent = score.title;
+  $('subtitle').textContent = score.voices.map(v => v.name).join(' · ') + ' · ' + score.measures + ' Takte · Tempo ' + score.tempo;
+  $('swing').checked = !!score.swing;
+  $('note').textContent = 'Die Stimmen singen KI-Sprachstimmen, die auf die Noten gesetzt werden: Töne und Rhythmus stimmen genau, der Klang ist nicht ganz wie ein echter Chor.';
+  $('player').hidden = false;
+  $('pos').max = score.measures + 0.99;
+  $('loopB').value = Math.min(4, score.measures); $('loopA').max = $('loopB').max = score.measures;
+  buildVoiceRows();
+  renderNotation();
+  await loadAudio();
+  draw(0);
+}
+
+function buildVoiceRows() {
+  const box = $('voices'); box.innerHTML = '';
+  if (ctx) { gains.forEach(g => g.disconnect()); gains = score.voices.map(() => { const g = ctx.createGain(); g.connect(master); return g; }); }
+  tracks = score.voices.map(v => ({ mute: false, vol: 1, mode: 'piano', syl: v.notes.filter(n => n.lyric) }));
+  $('cueVoice').innerHTML = score.voices.map((v, i) => `<option value="${i}">${esc(v.name)}</option>`).join('');
+  computeEntries();
+  score.voices.forEach((v, i) => {
+    const row = document.createElement('div'); row.className = 'voice'; row.id = 'vrow' + i;
+    row.innerHTML = `<span class="dot" style="background:${COLORS()[i % 5]}"></span>
+      <div><div class="vname">${esc(v.name)}</div><div class="vline" id="vline${i}">&nbsp;</div></div>
+      <div class="vctl">
+        <button class="toggle" id="mute${i}" title="Diese Stimme ausschalten und selbst singen">🎤 Ich singe</button>
+        <select id="mode${i}" aria-label="Wiedergabe ${esc(v.name)}"><option value="piano" selected>Klavier</option><option value="sing">gesungen</option><option value="both">gesungen + Klavier</option></select>
+        <input type="range" class="vol" id="vol${i}" min="0" max="1.5" step="0.05" value="1" aria-label="Lautstärke ${esc(v.name)}">
+      </div>`;
+    box.appendChild(row);
+    $('mute' + i).onclick = () => {
+      const anyBefore = tracks.some(t => t.mute);
+      tracks[i].mute = !tracks[i].mute; $('mute' + i).classList.toggle('on', tracks[i].mute); row.classList.toggle('muted', tracks[i].mute);
+      const anyNow = tracks.some(t => t.mute);
+      if (anyBefore !== anyNow) // someone sings along: the other voices go to half volume (and back to full afterwards)
+        tracks.forEach((t, j) => { t.vol = anyNow ? 0.5 : 1; $('vol' + j).value = t.vol; });
+      applyGains();
+      if (tracks[i].mute) $('cueVoice').value = i;
+      lastHlBeat = -1; cueKey = ''; draw(curPosSec());
+    };
+    $('mode' + i).onchange = e => { tracks[i].mode = e.target.value; applyGains(); };
+    $('vol' + i).oninput = e => { tracks[i].vol = +e.target.value; applyGains(); };
+  });
+}
+
+const curStyle = () => $('style').value;
+const audioUrl = vi => STATIC ? STATIC.audio(vi, curTempoPct, curStyle())
+  : `api/audio/${score.id}/${vi}.mp3?tempo=${Math.round(score.tempo * curTempoPct / 100)}&swing=${useSwing() ? 1 : 0}&style=${curStyle()}`;
+const humUrl = (vt, midi) => STATIC ? STATIC.hum(vt, midi) : `api/hum/${vt}/${midi}.mp3`;
+
+async function loadAudio() {
+  ensureCtx();
+  const wasPlaying = playing, posBeats = posToBeats(curPosSec());
+  stop();
+  status('Lade Stimmen …'); $('play').disabled = true;
+  try {
+    buffers = await Promise.all(score.voices.map(async (v, i) => {
+      const r = await cfetch(audioUrl(i)); if (!r.ok) throw new Error(v.name + ' (HTTP ' + r.status + ')');
+      const ab = await r.arrayBuffer();
+      return await new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej));
+    }));
+    status('');
+  } catch (e) { status('Audio konnte nicht geladen werden: ' + (e && e.message || e), true); }
+  $('play').disabled = false;
+  startPosSec = b2s(posBeats);
+  if (wasPlaying) play(false);
+}
+
+function ensureCtx() {
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+  gains = score.voices.map(() => { const g = ctx.createGain(); g.connect(master); return g; });
+}
+function applyGains() { if (!ctx) return; gains.forEach((g, i) => g.gain.setTargetAtTime(tracks[i].mute || tracks[i].mode === 'piano' ? 0 : tracks[i].vol, ctx.currentTime, 0.02)); }
+
+// iPhone: Web Audio is silent when the ring/silent switch is on, unless the page plays media.
+let unlockEl = null;
+function silentWavUrl() {
+  const sr = 8000, n = sr / 2, b = new ArrayBuffer(44 + n * 2), d = new DataView(b), w = (o, s) => [...s].forEach((c, i) => d.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); d.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 1, true);
+  d.setUint32(24, sr, true); d.setUint32(28, sr * 2, true); d.setUint16(32, 2, true); d.setUint16(34, 16, true); w(36, 'data'); d.setUint32(40, n * 2, true);
+  return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+}
+async function unlockAudio() {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
+  try { if (!unlockEl) { unlockEl = new Audio(silentWavUrl()); unlockEl.loop = true; unlockEl.setAttribute('playsinline', ''); } unlockEl.play().catch(() => {}); } catch {}
+  ensureCtx();
+  try { if (ctx.state !== 'running') await ctx.resume(); } catch {}
+  // tiny blip of silence through the graph also wakes some browsers
+  try { const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0); } catch {}
+}
+
+// ---------- transport ----------
+function loopRange() {
+  if (!$('loop').checked) return null;
+  const a = Math.max(1, Math.min(score.measures, +$('loopA').value || 1)), b = Math.max(a, Math.min(score.measures, +$('loopB').value || a));
+  return [measStartSec(a), measStartSec(b + 1)];
+}
+function curPosSec() {
+  if (!playing) return startPosSec;
+  let p = startPosSec + (ctx.currentTime - startCtxTime);
+  const L = loopRange();
+  if (L && startPosSec < L[1] && p >= L[1]) p = L[0] + ((p - L[0]) % (L[1] - L[0]));
+  return p;
+}
+async function play(withCountIn = true) {
+  await unlockAudio();
+  if (ctx.state !== 'running') status('Der Browser hat den Ton blockiert. Bitte noch einmal auf Abspielen tippen.', true);
+  if (!buffers.length) return;
+  if ($('cueSpeak').checked) loadCounts();
+  const L = loopRange();
+  if (L && (startPosSec < L[0] || startPosSec >= L[1])) startPosSec = L[0];
+  if (startPosSec >= buffers[0].duration - 0.3) startPosSec = 0;
+  let lead = 0.1;
+  if (withCountIn && $('giveAuto').checked) { $('play').disabled = true; lead += await giveNotes(ctx.currentTime + lead) + 0.4; $('play').disabled = false; }
+  if (withCountIn && $('countin').checked) {
+    const beat = 60 / tempoBpm();
+    if ($('cueSpeak').checked) await loadCounts();
+    for (let k = 0; k < BPM(); k++) { const t = ctx.currentTime + lead + k * beat; if ($('cueSpeak').checked && countBufs[k + 1]) sayCount(t, k + 1); else click(t, k === 0); }
+    lead += BPM() * beat;
+  }
+  const when = ctx.currentTime + lead;
+  applyGains();
+  sources = buffers.map((buf, i) => {
+    const s = ctx.createBufferSource(); s.buffer = buf; s.connect(gains[i]);
+    if (L) { s.loop = true; s.loopStart = L[0]; s.loopEnd = L[1]; }
+    s.start(when, startPosSec); return s;
+  });
+  startCtxTime = when; playing = true; lastSched = startPosSec;
+  $('play').textContent = '⏸ Pause';
+  schedTimer = setInterval(schedulePiano, 50);
+  tick();
+}
+function stop() {
+  if (!playing) return;
+  startPosSec = Math.max(0, curPosSec());
+  sources.forEach(s => { try { s.stop(); } catch {} }); sources = [];
+  playing = false; clearInterval(schedTimer); cancelAnimationFrame(rafId);
+  $('play').textContent = '▶ Abspielen';
+}
+function seekBeats(b) { const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); draw(startPosSec); if (was) play(false); }
+$('play').onclick = () => playing ? stop() : play(true);
+$('back').onclick = () => { const L = loopRange(); seekBeats(L ? posToBeats(L[0]) : 0); };
+$('pos').oninput = e => seekBeats((+e.target.value - 1) * BPM());
+['loop', 'loopA', 'loopB'].forEach(id => $(id).addEventListener('change', () => { if (playing) { stop(); play(false); } }));
+$('tempo').onchange = async e => { curTempoPct = +e.target.value; await loadAudio(); draw(startPosSec); };
+$('swing').onchange = () => loadAudio();
+$('style').onchange = () => loadAudio();
+$('cueVoice').onchange = () => { cueKey = ''; draw(curPosSec()); };
+const setOthers = mode => tracks.forEach((t, i) => { if (!t.mute) { t.mode = mode; $('mode' + i).value = mode; } }) || applyGains();
+$('allSing').onclick = () => setOthers('sing');
+$('allPiano').onclick = () => setOthers('piano');
+$('giveBtn').onclick = async () => { await unlockAudio(); if (playing) stop(); await giveNotes(ctx.currentTime + 0.1); };
+
+// ---------- giving the starting notes, like a choir director ----------
+const humCache = {};
+async function humBuffer(vt, midi) {
+  const k = vt + midi;
+  if (!humCache[k]) humCache[k] = cfetch(humUrl(vt, midi)).then(r => { if (!r.ok) throw new Error('hum'); return r.arrayBuffer(); })
+    .then(ab => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)));
+  return humCache[k];
+}
+function startNotes(beats) {
+  return score.voices.map(v => {
+    const n = v.notes.find(n => n.t + n.d > beats + 0.01);
+    return n ? n.midi : null;
+  });
+}
+async function giveNotes(t0) { // returns its duration in seconds
+  const beats = posToBeats(startPosSec), L = loopRange();
+  const from = L && (startPosSec < L[0] || startPosSec >= L[1]) ? posToBeats(L[0]) : beats;
+  const mids = startNotes(from), pc = (((score.key || 0) * 7) % 12 + 12) % 12;
+  const root = 48 + pc + (pc > 6 ? -12 : 0), chord = [root, root + 4, root + 7, root + 12];
+  let t = t0;
+  status('Tonangabe …');
+  chord.slice(0, 3).forEach((m, k) => pianoNote(t + k * 0.22, 0.6, m + 12, 0.8));
+  t += 0.75; chord.forEach(m => pianoNote(t, 1.3, m + 12, 0.7)); pianoNote(t, 1.3, root, 0.6);
+  t += 1.7;
+  const order = mids.map((m, i) => [m, i]).filter(x => x[0] != null);
+  for (const [m] of order) { pianoNote(t, 0.85, m, 1); t += 1.0; }
+  order.forEach(([m]) => pianoNote(t, 1.5, m, 0.8)); t += 1.9;
+  if ($('hum').checked) {
+    try {
+      const bufs = await Promise.all(order.map(([m, i]) => humBuffer(score.voices[i].type || 'female', m)));
+      const tStart = Math.max(t, ctx.currentTime + 0.05);
+      bufs.forEach((b, k) => {
+        const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; g.gain.value = 0.9;
+        s.connect(g); g.connect(master); const at = tStart + k * 0.9; s.start(at);
+        const end = Math.min(tStart + (order.length - 1) * 0.9 + 2.0, at + b.duration - 0.05);
+        g.gain.setValueAtTime(0.9, end - 0.35); g.gain.linearRampToValueAtTime(0, end); s.stop(end + 0.05);
+      });
+      t = tStart + (order.length - 1) * 0.9 + 2.2;
+    } catch (e) { status('Ansummen konnte nicht geladen werden.', true); }
+  }
+  const total = t - t0;
+  setTimeout(() => { if (/Tonangabe/.test($('status').textContent)) status(''); }, total * 1000);
+  return total;
+}
+
+function click(t, strong, vol = 1, freq) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.value = freq || (strong ? 1500 : 1000); g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5 * vol, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.08);
+}
+function schedulePiano() {
+  if (!playing) return;
+  const now = curPosSec(), to = now + 0.25, L = loopRange(), ranges = [];
+  if (L && to > L[1]) { ranges.push([lastSched, L[1]]); ranges.push([L[0], L[0] + (to - L[1])]); lastSched = L[0] + (to - L[1]); }
+  else { ranges.push([lastSched, to]); lastSched = to; }
+  score.voices.forEach((v, i) => {
+    if (tracks[i].mode === 'sing' || tracks[i].mute) return;
+    v.notes.forEach((n, k) => {
+      if (k > 0 && v.notes[k - 1].tie && v.notes[k - 1].midi === n.midi) return;
+      const ns = b2s(n.t);
+      for (const [a, b] of ranges) {
+        if (ns < a || ns >= b) continue;
+        let j = k; while (v.notes[j].tie && v.notes[j + 1]) j++;
+        const ne = b2s(v.notes[j].t + v.notes[j].d);
+        pianoNote(Math.max(ctx.currentTime, atCtx(ns, now, L)), ne - ns, n.midi, tracks[i].vol);
+      }
+    });
+  });
+  // metronome and spoken entry counts, both on the beat grid
+  const inRange = ns => ranges.some(([a, b]) => ns >= a && ns < b);
+  if ($('clickOn').checked) {
+    const dv = $('clickDiv').value, step = dv === 'bar' ? BPM() : +dv, vol = +$('clickVol').value;
+    const seen = new Set();
+    for (const [a, b] of ranges) {
+      for (let bt = Math.floor(posToBeats(a) / step) * step; bt < posToBeats(b) + 1e-6; bt += step) {
+        const ns = b2s(bt); if (ns < a || ns >= b || seen.has(bt)) continue; seen.add(bt);
+        const bar = Math.abs(bt / BPM() - Math.round(bt / BPM())) < 1e-6;
+        click(Math.max(ctx.currentTime, atCtx(ns, now, L)), bar, vol * (Number.isInteger(bt) ? 1 : 0.55));
+      }
+    }
+  }
+  if ($('cueSpeak').checked && tracks.some(t => t.mute)) { // only while someone sings a voice themselves
+    for (const c of cueCounts(+$('cueVoice').value)) {
+      const ns = b2s(c.b); if (!inRange(ns)) continue;
+      sayCount(Math.max(ctx.currentTime, atCtx(ns, now, L)), c.n);
+    }
+  }
+}
+// song position (s) -> AudioContext time, also across the loop seam
+function atCtx(ns, now, L) { return ns >= now || !L ? ctx.currentTime + Math.max(0, ns - now) : ctx.currentTime + (L[1] - now) + (ns - L[0]); }
+
+// ---------- entry counter: before each entry of "my" voice, count the bar's beats like a choir director ----------
+let entries = [];
+function computeEntries() {
+  entries = score.voices.map(v => {
+    const out = []; let prevEnd = -1e9;
+    v.notes.forEach((n, k) => {
+      if (k > 0 && v.notes[k - 1].tie && v.notes[k - 1].midi === n.midi) { prevEnd = n.t + n.d; return; }
+      if (n.t - prevEnd >= Math.max(2, BPM()) - 1e-6) out.push({ t: n.t, from: Math.max(0, prevEnd), lyric: n.lyric || '', m: n.m });
+      prevEnd = n.t + n.d;
+    });
+    return out;
+  });
+}
+function cueCounts(vi) { // spoken beat numbers in the bar(s) before each entry: e.g. "drei, vier" before an entry on 1
+  const out = [];
+  for (const e of entries[vi] || []) {
+    for (let b = Math.ceil(e.t - BPM() - 1e-6); b < e.t - 1e-6; b++) {
+      if (b < e.from - 1e-6 || b < 0) continue;
+      out.push({ b, n: ((b % BPM()) + BPM()) % BPM() + 1, e });
+    }
+  }
+  return out;
+}
+const countBufs = {};
+async function loadCounts() {
+  if (Object.keys(countBufs).length) return;
+  await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map(async n => {
+    try { const r = await fetch('count/' + n + '.mp3'); if (r.ok) { const ab = await r.arrayBuffer(); countBufs[n] = await new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)); } } catch {}
+  }));
+}
+function sayCount(t, n) {
+  const b = countBufs[n];
+  if (!b) { click(t, n === 1, 0.8, 700); return; }
+  const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; g.gain.value = 1.1;
+  s.connect(g); g.connect(master); s.start(t); s.stop(t + Math.min(b.duration, 60 / tempoBpm() * 0.95));
+}
+let cueKey = '';
+function drawCue(beats) {
+  const vi = +$('cueVoice').value || 0, v = score.voices[vi]; if (!v) return;
+  if (!playing && !tracks.some(t => t.mute)) {
+    const k0 = 'idle'; if (cueKey === k0) return; cueKey = k0;
+    $('cue').className = ''; $('cueNum').textContent = '🎤'; $('cueMain').textContent = 'Einsätze';
+    $('cueSub').textContent = 'Tippe unten bei deiner Stimme auf „Ich singe“.'; $('cueBeats').innerHTML = ''; return;
+  }
+  let n = currentNote(vi, beats); const es = entries[vi] || [];
+  if (!n) { // short breath rest inside a phrase: still "singing"
+    const k = v.notes.findIndex(x => x.t > beats);
+    if (k > 0 && v.notes[k].t - (v.notes[k - 1].t + v.notes[k - 1].d) < Math.max(2, BPM()) - 1e-6) n = { lyric: '' , rest: true, nextLyric: v.notes[k].lyric };
+  }
+  const next = es.find(e => e.t > beats + 1e-6);
+  let cls = '', num = '–', main = '', sub = '', dots = '';
+  if (n && !(next && next.t - beats <= 0)) {
+    cls = 'sing'; num = '🎤'; main = v.name + ': singen'; sub = n.lyric ? '„' + n.lyric + '“' : (n.rest ? 'kurz atmen' + (n.nextLyric ? ' … „' + n.nextLyric + '“' : '') : '');
+    if (!n.lyric && !n.rest) sub = 'Ton halten …';
+  } else if (next) {
+    const until = next.t - beats, entryBar = Math.floor(next.t / BPM()) + 1, curBar = Math.floor(beats / BPM()) + 1;
+    const counting = until <= BPM() + 1e-6 && Math.floor(beats) >= next.from - 1e-6;
+    if (counting) {
+      const b = Math.floor(beats + 1e-6); cls = 'count'; num = String(((b % BPM()) + BPM()) % BPM() + 1);
+      main = 'Gleich Einsatz!'; sub = `Takt ${entryBar}${next.lyric ? ' · „' + next.lyric + '“' : ''}`;
+      const first = Math.ceil(next.t - BPM() - 1e-6);
+      for (let k = first; k < next.t - 1e-6; k++) if (k >= next.from - 1e-6) dots += `<span class="${k <= b ? 'on' : ''}"></span>`;
+      dots += '<span class="go"></span>';
+    } else {
+      const bars = entryBar - curBar;
+      num = String(Math.max(0, bars)); main = 'Pause';
+      sub = `Einsatz in Takt ${entryBar}` + (bars > 0 ? ` · noch ${bars} ${bars === 1 ? 'Takt' : 'Takte'}` : '') + (next.lyric ? ' · „' + next.lyric + '“' : '');
+    }
+  } else { main = v.name; sub = 'Keine Einsätze mehr – Ende des Stücks.'; }
+  const key = cls + num + main + sub + dots;
+  if (key === cueKey) return; cueKey = key;
+  $('cue').className = cls; $('cueNum').textContent = num; $('cueMain').textContent = main; $('cueSub').textContent = sub; $('cueBeats').innerHTML = dots;
+}
+function pianoNote(t, dur, midi, vol) {
+  // envelope events never overlap (overlapping ramps made the clicks)
+  const f = 440 * Math.pow(2, (midi - 69) / 12), g = ctx.createGain(); g.connect(master);
+  const peak = 0.2 * vol, rel = t + Math.max(0.04, dur - 0.03), dEnd = Math.min(rel, t + 0.45);
+  const lvlAt = x => peak * Math.pow(0.35, Math.min(1, (x - t - 0.012) / 0.43));
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.012);
+  if (dEnd > t + 0.013) g.gain.exponentialRampToValueAtTime(lvlAt(dEnd), dEnd);
+  g.gain.setTargetAtTime(0, rel, 0.07);
+  const stopAt = rel + 0.6;
+  [[1, 'triangle', 1], [2, 'sine', 0.28], [3, 'sine', 0.1], [4, 'sine', 0.04]].forEach(([h, type, a]) => {
+    const o = ctx.createOscillator(); o.type = type; o.frequency.value = f * h;
+    const hg = ctx.createGain(); hg.gain.value = a; o.connect(hg); hg.connect(g); o.start(t); o.stop(stopAt); });
+}
+
+// ---------- notation (Verovio) ----------
+async function getXml() {
+  if (STATIC) return (await cfetch(STATIC.xml)).text();
+  return (await fetch('api/musicxml/' + score.id)).text();
+}
+function whenVerovio() {
+  return new Promise((res, rej) => {
+    if (!window.verovio) return rej(new Error('Notensatz-Bibliothek fehlt'));
+    if (verovio.module.calledRun || verovio.module._vrvToolkit_constructor) return res();
+    verovio.module.onRuntimeInitialized = res;
+    setTimeout(() => rej(new Error('Notensatz lädt zu lange')), 60000);
+  });
+}
+async function renderNotation() {
+  const box = $('notation');
+  try {
+    const [xml] = await Promise.all([getXml(), whenVerovio()]);
+    if (!tk) { tk = new verovio.toolkit(); window._tk = tk; }
+    const w = Math.max(320, box.clientWidth), scale = w < 600 ? 32 : 40;
+    tk.setOptions({ pageWidth: Math.round(w * 100 / scale), scale, adjustPageHeight: true, breaks: 'auto', header: 'none', footer: 'none',
+      pageMarginLeft: 30, pageMarginRight: 30, pageMarginTop: 30, pageMarginBottom: 30, lyricSize: 4.0, spacingSystem: 14 });
+    tk.loadData(xml);
+    tk.renderToMIDI();
+    let html = '';
+    for (let p = 1; p <= tk.getPageCount(); p++) html += tk.renderToSVG(p);
+    box.innerHTML = html;
+    noteStaff = {};
+    box.querySelectorAll('g.staff').forEach(st => {
+      const m = st.closest('g.measure'); const idx = [...m.querySelectorAll(':scope > g.staff')].indexOf(st);
+      st.querySelectorAll('g.note').forEach(n => noteStaff[n.id] = idx);
+    });
+    // map drawn notes to our score notes (same order per staff) -> onset in beats
+    noteBeat = {}; noteEls = score.voices.map(() => []);
+    const perStaff = score.voices.map(() => []);
+    box.querySelectorAll('g.note').forEach(n => { const st = noteStaff[n.id]; if (perStaff[st]) perStaff[st].push(n); });
+    perStaff.forEach((els, vi) => {
+      const ns = score.voices[vi].notes;
+      if (els.length !== ns.length) console.warn('note count mismatch', vi, els.length, ns.length);
+      els.forEach((el, k) => { if (ns[k]) { noteBeat[el.id] = ns[k].t; noteEls[vi][k] = el; } });
+    });
+    const measures = [...box.querySelectorAll('g.measure')];
+    const tapAt = beats => { seekBeats(beats); if (!playing) play(false); };
+    box.onclick = ev => {
+      const note = ev.target.closest && ev.target.closest('g.note');
+      if (note && noteBeat[note.id] != null) { tapAt(noteBeat[note.id]); return; }
+      // tap anywhere inside a bar: start of that bar
+      for (let i = 0; i < measures.length; i++) {
+        const r = measures[i].getBoundingClientRect();
+        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top - 6 && ev.clientY <= r.bottom + 6) { tapAt(i * BPM()); return; }
+      }
+    };
+    lastHlBeat = -1; lastPageTop = -1; highlight(posToBeats(curPosSec()));
+  } catch (e) { box.innerHTML = '<p class="err" style="padding:12px">Noten konnten nicht angezeigt werden: ' + esc(String(e.message || e)) + '</p>'; }
+}
+let resizeT = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => score && tk && renderNotation(), 400); });
+
+function highlight(beats) {
+  if (!tk || Math.abs(beats - lastHlBeat) < 0.02) return;
+  lastHlBeat = beats;
+  hlIds.forEach(el => el.classList.remove('hl0', 'hl1', 'hl2', 'hl3', 'hl4', 'hls'));
+  hlIds = [];
+  document.querySelectorAll('#notation rect.marker').forEach(r => r.remove());
+  let first = null;
+  for (let st = 0; st < score.voices.length; st++) {
+    const ns = score.voices[st].notes;
+    let k = -1;
+    for (let j = 0; j < ns.length; j++) { if (ns[j].t <= beats + 1e-6 && beats < ns[j].t + ns[j].d) { k = j; break; } if (ns[j].t > beats) break; }
+    const el = k >= 0 && noteEls[st] ? noteEls[st][k] : null; if (!el) continue;
+    if (!first) first = el;  // page follows the music even when nothing is marked
+    if (!tracks[st] || !tracks[st].mute) continue;  // marker only on the voice(s) chosen with "Ich singe"
+    el.classList.add('hl' + (st % 5)); hlIds.push(el);
+    el.querySelectorAll('g.syl').forEach(s => { s.classList.add('hls'); hlIds.push(s); });
+    marker(el, st);
+  }
+  if (first && playing) {
+    const box = $('notation'), sys = first.closest('g.system') || first;
+    const r = sys.getBoundingClientRect(), br = box.getBoundingClientRect();
+    if (r.top < br.top + 4 || r.bottom > br.bottom - 4) box.scrollTo({ top: box.scrollTop + r.top - br.top - 10, behavior: 'smooth' });
+  }
+}
+
+// highlighter-pen look: a translucent colored band behind the notehead and behind its syllable
+function marker(el, st) {
+  const color = COLORS()[st % 5];
+  const add = (target, padX, padY) => {
+    let b; try { b = target.getBBox(); } catch { return; }
+    if (!b || !b.width) return;
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('class', 'marker');
+    r.setAttribute('x', b.x - padX); r.setAttribute('y', b.y - padY);
+    r.setAttribute('width', b.width + 2 * padX); r.setAttribute('height', b.height + 2 * padY);
+    r.setAttribute('rx', Math.min(b.height, b.width) * 0.35 + padY);
+    r.style.fill = color;
+    el.parentNode.insertBefore(r, el);
+  };
+  const head = el.querySelector('g.notehead') || el;
+  let hb; try { hb = head.getBBox(); } catch { return; }
+  const u = hb.height || 100;
+  add(head, u * 1.1, u * 1.0);
+  el.querySelectorAll('g.syl').forEach(sy => add(sy, u * 0.6, u * 0.45));
+}
+
+// ---------- display ----------
+function tick() {
+  const p = curPosSec(); draw(p);
+  if (playing && buffers[0] && p > buffers[0].duration && !loopRange()) { stop(); startPosSec = 0; }
+  if (playing) rafId = requestAnimationFrame(tick);
+}
+function currentNote(vi, beats) {
+  const ns = score.voices[vi].notes;
+  for (const n of ns) { if (n.t <= beats && beats < n.t + n.d) return n; if (n.t > beats) break; }
+  return null;
+}
+function draw(p) {
+  const beats = posToBeats(Math.max(0, p));
+  const m = Math.min(score.measures, Math.floor(beats / BPM()) + 1);
+  $('measLbl').textContent = `Takt ${m} / ${score.measures}`;
+  if (document.activeElement !== $('pos')) $('pos').value = 1 + beats / BPM();
+  score.voices.forEach((v, i) => {
+    const S = tracks[i].syl; let k = -1;
+    for (let j = 0; j < S.length; j++) { if (S[j].t <= beats + 0.02) k = j; else break; }
+    let html = '';
+    for (let j = Math.max(0, k - 2); j < Math.min(S.length, k + 12); j++) {
+      const sep = S[j].hyph ? '-' : ' ';
+      html += j === k ? `<b>${esc(S[j].lyric)}</b>${sep}` : esc(S[j].lyric) + sep;
+    }
+    $('vline' + i).innerHTML = html || '&nbsp;';
+  });
+  highlight(beats);
+  drawCue(beats);
+  curBeats = beats;
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+let curBeats = 0;
+
+init();
+}
+</script>
+</body>
+</html>

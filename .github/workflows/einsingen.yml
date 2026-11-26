@@ -1,0 +1,49 @@
+name: Stücke einsingen
+on:
+  push:
+    branches: [main]
+    paths: ['noten/**', 'web/**', 'server/**', '.github/workflows/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: einsingen
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bestehende Seite holen
+        run: |
+          if git ls-remote --exit-code --heads origin site >/dev/null; then
+            git clone --depth 1 --branch site "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" site
+          else
+            mkdir site && cd site && git init -q -b site && git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+      - name: Programme installieren
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq espeak-ng ffmpeg >/dev/null
+          sudo apt-get install -y -qq mbrola mbrola-de2 mbrola-de3 mbrola-de4 mbrola-de5 mbrola-de6 mbrola-de7 >/dev/null || echo "MBROLA nicht verfügbar (nur für den alten Roboter-Klang nötig)"
+          pip install -q -r requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: ~/voices
+          key: voices-v1
+      - name: Stimmen vorbereiten
+        env: { CHOR_VOICES: ~/voices }
+        run: CHOR_VOICES=$HOME/voices python server/prepare_voices.py
+      - name: Einsingen
+        env:
+          CHOR_PASSWORT: ${{ secrets.CHOR_PASSWORT }}
+        run: CHOR_VOICES=$HOME/voices python -W ignore server/ci_build.py noten site "https://github.com/${{ github.repository }}/upload/main/noten"
+      - name: Veröffentlichen
+        run: |
+          cd site
+          git config user.name "singen-mit-anders-bot"; git config user.email "singen-mit-anders-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Nichts Neues."; exit 0; fi
+          git commit -qm "Bibliothek aktualisiert"
+          git push -q origin site

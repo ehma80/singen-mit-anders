@@ -1,0 +1,9 @@
+site/
+site2/
+noten/*.pdf
+noten/*.xml
+noten/*.musicxml
+noten/*.mxl
+seed/
+data/
+__pycache__/
