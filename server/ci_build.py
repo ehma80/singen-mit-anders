@@ -49,7 +49,7 @@ for f in sorted(os.listdir(noten)):
         continue
     base = name[:-4] if name.lower().endswith('.tar') else os.path.splitext(name)[0]
     sid = re.sub(r'[^a-z0-9]+', '-', base.lower()).strip('-') or 'stueck'
-    h = hashlib.sha1(open(src, 'rb').read()).hexdigest()[:12]
+    h = hashlib.sha1(open(src_plain, 'rb').read()).hexdigest()[:12]  # of the content, so re-encrypting the same piece changes nothing
     wanted[sid] = (name, h, src_plain)
 failed = []
 for sid, (name, h, src_plain) in wanted.items():
