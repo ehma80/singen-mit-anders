@@ -37,6 +37,7 @@
   label.small { font-size:.9rem; color:var(--mute); display:flex; gap:6px; align-items:center; }
   input[type=number] { width:68px; padding:6px 8px; }
   .muted .vname, .muted .vline { opacity:.55; }
+  .voice.mine .vname { color:var(--warn); }
   a.btnlink { display:inline-block; margin:6px 0; padding:9px 14px; border-radius:8px; background:var(--acc); color:#fff; text-decoration:none; font-weight:600; }
   .songs { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin-top:10px; }
   .song { text-align:left; padding:10px 12px; } .song small { display:block; color:var(--mute); }
@@ -60,6 +61,8 @@
   /* entry counter (sticky, so it stays visible while reading the notes) */
   #cue { position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:14px; padding:10px 14px; margin-bottom:12px;
          border-radius:12px; background:var(--card); border:1px solid var(--line); box-shadow:0 2px 10px rgba(0,0,0,.08); min-height:58px; }
+  #cuePlay { width:48px; height:48px; min-width:48px; border-radius:50%; padding:0; flex:none; display:flex; align-items:center; justify-content:center; }
+  #cuePlay svg { width:22px; height:22px; fill:#fff; }
   #cueNum { font-size:2.4rem; font-weight:800; min-width:1.4em; text-align:center; font-variant-numeric:tabular-nums; line-height:1; color:var(--mute); }
   #cue.count #cueNum { color:var(--warn); }
   #cue.sing #cueNum { color:var(--ok); }
@@ -100,7 +103,7 @@
   </div>
 
   <div id="player" hidden>
-    <div id="cue"><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Wähle unten bei „Ich singe“ deine Stimme.</div></div><div class="beats" id="cueBeats"></div></div>
+    <div id="cue"><button class="primary" id="cuePlay" aria-label="Abspielen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Tippe unten bei deiner Stimme auf „⭐ Meine Stimme“.</div></div><div class="beats" id="cueBeats"></div></div>
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <div class="row">
@@ -132,7 +135,7 @@
         <label class="small">laut <input type="range" id="clickVol" min="0.1" max="1.5" step="0.05" value="0.7" style="width:90px" aria-label="Klick-Lautstärke"></label>
       </div>
       <div class="row" style="margin-top:8px">
-        <label class="small" title="Zählt vor jedem Einsatz deiner Stimme (bei „Ich singe“) laut die Schläge des Takts vor, z. B. „drei, vier“."><input type="checkbox" id="cueSpeak" checked> 🗣 Einsätze vorzählen</label>
+        <label class="small" title="Zählt vor jedem Einsatz deiner Stimme („Meine Stimme“) laut die Schläge des Takts vor, z. B. „drei, vier“."><input type="checkbox" id="cueSpeak" checked> 🗣 Einsätze vorzählen</label>
         <label class="small">für <select id="cueVoice"></select></label>
       </div>
       <p id="status" class="hint" style="margin:8px 0 0"></p>
@@ -148,7 +151,7 @@
 
     <div class="card">
       <div id="notation"><p class="hint" style="padding:12px">Noten werden gesetzt …</p></div>
-      <p class="hint" style="margin:8px 0 0">Bei deiner Stimme („Ich singe“) wird die aktuelle Note wie mit einem Textmarker markiert. Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
+      <p class="hint" style="margin:8px 0 0">Bei „Meine Stimme“ wird die aktuelle Note wie mit einem Textmarker markiert. Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
     </div>
 
     <p class="hint" id="note"></p>
@@ -158,6 +161,7 @@
 <script>
 {
 let STATIC = null;
+const PLAY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>', PAUSE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>';
 const LIBMODE = !!window.LIBRARY_MODE;
 const $ = id => document.getElementById(id);
 let score = null, ctx = null, master = null, buffers = [], gains = [], sources = [], tracks = [];
@@ -365,7 +369,7 @@ async function setupScore() {
 function buildVoiceRows() {
   const box = $('voices'); box.innerHTML = '';
   if (ctx) { gains.forEach(g => g.disconnect()); gains = score.voices.map(() => { const g = ctx.createGain(); g.connect(master); return g; }); }
-  tracks = score.voices.map(v => ({ mute: false, vol: 1, mode: 'piano', syl: v.notes.filter(n => n.lyric) }));
+  tracks = score.voices.map(v => ({ mine: false, solo: false, off: false, vol: 1, mode: 'piano', syl: v.notes.filter(n => n.lyric) }));
   $('cueVoice').innerHTML = score.voices.map((v, i) => `<option value="${i}">${esc(v.name)}</option>`).join('');
   computeEntries();
   score.voices.forEach((v, i) => {
@@ -373,26 +377,35 @@ function buildVoiceRows() {
     row.innerHTML = `<span class="dot" style="background:${COLORS()[i % 5]}"></span>
       <div><div class="vname">${esc(v.name)}</div><div class="vline" id="vline${i}">&nbsp;</div></div>
       <div class="vctl">
-        <button class="toggle" id="mute${i}" title="Diese Stimme ausschalten und selbst singen">🎤 Ich singe</button>
+        <button class="toggle" id="mine${i}" title="Meine Stimme: bleibt laut, wird markiert, Einsätze werden gezählt. Die anderen werden halb so laut.">⭐ Meine Stimme</button>
+        <button class="toggle" id="solo${i}" title="Nur diese Stimme hören">Solo</button>
+        <button class="toggle" id="off${i}" title="Diese Stimme stumm schalten" aria-label="${esc(v.name)} stumm">🔇</button>
         <select id="mode${i}" aria-label="Wiedergabe ${esc(v.name)}"><option value="piano" selected>Klavier</option><option value="sing">gesungen</option><option value="both">gesungen + Klavier</option></select>
         <input type="range" class="vol" id="vol${i}" min="0" max="1.5" step="0.05" value="1" aria-label="Lautstärke ${esc(v.name)}">
       </div>`;
     box.appendChild(row);
-    $('mute' + i).onclick = () => {
-      const anyBefore = tracks.some(t => t.mute);
-      tracks[i].mute = !tracks[i].mute; $('mute' + i).classList.toggle('on', tracks[i].mute); row.classList.toggle('muted', tracks[i].mute);
-      const anyNow = tracks.some(t => t.mute);
-      if (anyBefore !== anyNow) // someone sings along: the other voices go to half volume (and back to full afterwards)
-        tracks.forEach((t, j) => { t.vol = anyNow ? 0.5 : 1; $('vol' + j).value = t.vol; });
-      applyGains();
-      if (tracks[i].mute) $('cueVoice').value = i;
-      lastHlBeat = -1; cueKey = ''; draw(curPosSec());
+    $('mine' + i).onclick = () => {
+      const on = !tracks[i].mine;
+      tracks.forEach((t, j) => { t.mine = on && j === i; t.vol = !on ? 1 : (j === i ? 1 : 0.5); $('vol' + j).value = t.vol; });
+      if (on) $('cueVoice').value = i;
+      refreshVoices();
     };
+    $('solo' + i).onclick = () => { tracks[i].solo = !tracks[i].solo; refreshVoices(); };
+    $('off' + i).onclick = () => { tracks[i].off = !tracks[i].off; refreshVoices(); };
     $('mode' + i).onchange = e => { tracks[i].mode = e.target.value; applyGains(); };
     $('vol' + i).oninput = e => { tracks[i].vol = +e.target.value; applyGains(); };
   });
 }
 
+// solo wins over everything; otherwise a voice sounds unless it is switched off
+const audible = i => tracks.some(t => t.solo) ? tracks[i].solo : !tracks[i].off;
+function refreshVoices() {
+  tracks.forEach((t, j) => {
+    $('mine' + j).classList.toggle('on', t.mine); $('solo' + j).classList.toggle('pon', t.solo); $('off' + j).classList.toggle('on', t.off);
+    $('vrow' + j).classList.toggle('muted', !audible(j)); $('vrow' + j).classList.toggle('mine', t.mine);
+  });
+  applyGains(); lastHlBeat = -1; cueKey = ''; draw(curPosSec());
+}
 const curStyle = () => $('style').value;
 const audioUrl = vi => STATIC ? STATIC.audio(vi, curTempoPct, curStyle())
   : `api/audio/${score.id}/${vi}.mp3?tempo=${Math.round(score.tempo * curTempoPct / 100)}&swing=${useSwing() ? 1 : 0}&style=${curStyle()}`;
@@ -402,7 +415,7 @@ async function loadAudio() {
   ensureCtx();
   const wasPlaying = playing, posBeats = posToBeats(curPosSec());
   stop();
-  status('Lade Stimmen …'); $('play').disabled = true;
+  status('Lade Stimmen …'); $('play').disabled = $('cuePlay').disabled = true;
   try {
     buffers = await Promise.all(score.voices.map(async (v, i) => {
       const r = await cfetch(audioUrl(i)); if (!r.ok) throw new Error(v.name + ' (HTTP ' + r.status + ')');
@@ -411,7 +424,7 @@ async function loadAudio() {
     }));
     status('');
   } catch (e) { status('Audio konnte nicht geladen werden: ' + (e && e.message || e), true); }
-  $('play').disabled = false;
+  $('play').disabled = $('cuePlay').disabled = false;
   startPosSec = b2s(posBeats);
   if (wasPlaying) play(false);
 }
@@ -422,7 +435,7 @@ function ensureCtx() {
   master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
   gains = score.voices.map(() => { const g = ctx.createGain(); g.connect(master); return g; });
 }
-function applyGains() { if (!ctx) return; gains.forEach((g, i) => g.gain.setTargetAtTime(tracks[i].mute || tracks[i].mode === 'piano' ? 0 : tracks[i].vol, ctx.currentTime, 0.02)); }
+function applyGains() { if (!ctx) return; gains.forEach((g, i) => g.gain.setTargetAtTime(!audible(i) || tracks[i].mode === 'piano' ? 0 : tracks[i].vol, ctx.currentTime, 0.02)); }
 
 // iPhone: Web Audio is silent when the ring/silent switch is on, unless the page plays media.
 let unlockEl = null;
@@ -463,7 +476,7 @@ async function play(withCountIn = true) {
   if (L && (startPosSec < L[0] || startPosSec >= L[1])) startPosSec = L[0];
   if (startPosSec >= buffers[0].duration - 0.3) startPosSec = 0;
   let lead = 0.1;
-  if (withCountIn && $('giveAuto').checked) { $('play').disabled = true; lead += await giveNotes(ctx.currentTime + lead) + 0.4; $('play').disabled = false; }
+  if (withCountIn && $('giveAuto').checked) { $('play').disabled = $('cuePlay').disabled = true; lead += await giveNotes(ctx.currentTime + lead) + 0.4; $('play').disabled = $('cuePlay').disabled = false; }
   if (withCountIn && $('countin').checked) {
     const beat = 60 / tempoBpm();
     if ($('cueSpeak').checked) await loadCounts();
@@ -478,7 +491,7 @@ async function play(withCountIn = true) {
     s.start(when, startPosSec); return s;
   });
   startCtxTime = when; playing = true; lastSched = startPosSec;
-  $('play').textContent = '⏸ Pause';
+  $('play').textContent = '⏸ Pause'; $('cuePlay').innerHTML = PAUSE_SVG; $('cuePlay').setAttribute('aria-label', 'Pause');
   schedTimer = setInterval(schedulePiano, 50);
   tick();
 }
@@ -487,10 +500,10 @@ function stop() {
   startPosSec = Math.max(0, curPosSec());
   sources.forEach(s => { try { s.stop(); } catch {} }); sources = [];
   playing = false; clearInterval(schedTimer); cancelAnimationFrame(rafId);
-  $('play').textContent = '▶ Abspielen';
+  $('play').textContent = '▶ Abspielen'; $('cuePlay').innerHTML = PLAY_SVG; $('cuePlay').setAttribute('aria-label', 'Abspielen');
 }
 function seekBeats(b) { const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); draw(startPosSec); if (was) play(false); }
-$('play').onclick = () => playing ? stop() : play(true);
+$('play').onclick = $('cuePlay').onclick = () => playing ? stop() : play(true);
 $('back').onclick = () => { const L = loopRange(); seekBeats(L ? posToBeats(L[0]) : 0); };
 $('pos').oninput = e => seekBeats((+e.target.value - 1) * BPM());
 ['loop', 'loopA', 'loopB'].forEach(id => $(id).addEventListener('change', () => { if (playing) { stop(); play(false); } }));
@@ -498,7 +511,7 @@ $('tempo').onchange = async e => { curTempoPct = +e.target.value; await loadAudi
 $('swing').onchange = () => loadAudio();
 $('style').onchange = () => loadAudio();
 $('cueVoice').onchange = () => { cueKey = ''; draw(curPosSec()); };
-const setOthers = mode => tracks.forEach((t, i) => { if (!t.mute) { t.mode = mode; $('mode' + i).value = mode; } }) || applyGains();
+const setOthers = mode => tracks.forEach((t, i) => { if (!t.mine) { t.mode = mode; $('mode' + i).value = mode; } }) || applyGains();
 $('allSing').onclick = () => setOthers('sing');
 $('allPiano').onclick = () => setOthers('piano');
 $('giveBtn').onclick = async () => { await unlockAudio(); if (playing) stop(); await giveNotes(ctx.currentTime + 0.1); };
@@ -560,7 +573,7 @@ function schedulePiano() {
   if (L && to > L[1]) { ranges.push([lastSched, L[1]]); ranges.push([L[0], L[0] + (to - L[1])]); lastSched = L[0] + (to - L[1]); }
   else { ranges.push([lastSched, to]); lastSched = to; }
   score.voices.forEach((v, i) => {
-    if (tracks[i].mode === 'sing' || tracks[i].mute) return;
+    if (tracks[i].mode === 'sing' || !audible(i)) return;
     v.notes.forEach((n, k) => {
       if (k > 0 && v.notes[k - 1].tie && v.notes[k - 1].midi === n.midi) return;
       const ns = b2s(n.t);
@@ -585,7 +598,7 @@ function schedulePiano() {
       }
     }
   }
-  if ($('cueSpeak').checked && tracks.some(t => t.mute)) { // only while someone sings a voice themselves
+  if ($('cueSpeak').checked && tracks.some(t => t.mine)) { // only while someone sings a voice themselves
     for (const c of cueCounts(+$('cueVoice').value)) {
       const ns = b2s(c.b); if (!inRange(ns)) continue;
       sayCount(Math.max(ctx.currentTime, atCtx(ns, now, L)), c.n);
@@ -634,10 +647,10 @@ function sayCount(t, n) {
 let cueKey = '';
 function drawCue(beats) {
   const vi = +$('cueVoice').value || 0, v = score.voices[vi]; if (!v) return;
-  if (!playing && !tracks.some(t => t.mute)) {
+  if (!playing && !tracks.some(t => t.mine)) {
     const k0 = 'idle'; if (cueKey === k0) return; cueKey = k0;
     $('cue').className = ''; $('cueNum').textContent = '🎤'; $('cueMain').textContent = 'Einsätze';
-    $('cueSub').textContent = 'Tippe unten bei deiner Stimme auf „Ich singe“.'; $('cueBeats').innerHTML = ''; return;
+    $('cueSub').textContent = 'Tippe unten bei deiner Stimme auf „⭐ Meine Stimme“.'; $('cueBeats').innerHTML = ''; return;
   }
   let n = currentNote(vi, beats); const es = entries[vi] || [];
   if (!n) { // short breath rest inside a phrase: still "singing"
@@ -753,7 +766,7 @@ function highlight(beats) {
     for (let j = 0; j < ns.length; j++) { if (ns[j].t <= beats + 1e-6 && beats < ns[j].t + ns[j].d) { k = j; break; } if (ns[j].t > beats) break; }
     const el = k >= 0 && noteEls[st] ? noteEls[st][k] : null; if (!el) continue;
     if (!first) first = el;  // page follows the music even when nothing is marked
-    if (!tracks[st] || !tracks[st].mute) continue;  // marker only on the voice(s) chosen with "Ich singe"
+    if (!tracks[st] || !tracks[st].mine) continue;  // marker only on "Meine Stimme"
     el.classList.add('hl' + (st % 5)); hlIds.push(el);
     el.querySelectorAll('g.syl').forEach(s => { s.classList.add('hls'); hlIds.push(s); });
     marker(el, st);
