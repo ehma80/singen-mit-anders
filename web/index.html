@@ -76,6 +76,17 @@
 #gate{position:fixed;inset:0;z-index:100;background:var(--bg,#fff);display:flex;align-items:center;justify-content:center;padding:20px}
 #gate form{max-width:340px;width:100%;text-align:center}#gate input{width:100%;font-size:18px;padding:10px;margin:8px 0;box-sizing:border-box}
 #gate button{font-size:17px;padding:10px 24px}
+  .vadv { display:none; gap:6px; align-items:center; flex-wrap:wrap; }
+  body.adv .vadv { display:flex; }
+  .toggle.sing { background:var(--warn); color:#fff; border-color:var(--warn); }
+  .toggle.solo { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .legend { display:grid; gap:6px; margin:4px 0 8px; font-size:.9rem; color:var(--mute); }
+  .legend b { color:var(--ink); }
+  #voiceInfo { font-weight:600; margin:0 0 6px; min-height:1.4em; }
+  #voiceInfo.sing { color:var(--warn); } #voiceInfo.solo { color:var(--acc); }
+  #setBtn[aria-expanded=true] { border-color:var(--acc); color:var(--acc); }
+  #settings { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; display:grid; gap:12px; }
+  #settings h3 { font-size:.8rem; text-transform:none; color:var(--mute); margin:0 0 4px; }
   .brand { font-size:.8rem; font-weight:700; letter-spacing:.02em; color:var(--acc); margin-bottom:2px; }
 </style>
 </head>
@@ -103,55 +114,70 @@
   </div>
 
   <div id="player" hidden>
-    <div id="cue"><button class="primary" id="cuePlay" aria-label="Abspielen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Tippe unten bei deiner Stimme auf „⭐ Meine Stimme“.</div></div><div class="beats" id="cueBeats"></div></div>
+    <div id="cue"><button class="primary" id="cuePlay" aria-label="Abspielen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Tippe unten bei deiner Stimme auf „🎤 Ich singe“ oder „🔊 Solo“.</div></div><div class="beats" id="cueBeats"></div></div>
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <div class="row">
           <button class="primary" id="play">▶ Abspielen</button>
-          <button id="back" title="Zum Anfang bzw. Schleifenbeginn">⏮</button>
+          <button id="back" title="Zum Anfang bzw. Schleifenbeginn" aria-label="Zum Anfang">⏮</button>
           <span class="meas" id="measLbl">Takt 1 / 1</span>
         </div>
-        <div class="row">
-          <label class="small">Tempo <select id="tempo"></select></label>
-          <label class="small" id="swingWrap"><input type="checkbox" id="swing"> Swing</label>
-          <label class="small">Klang <select id="style"><option value="chor">Chor (3 KI-Sänger je Stimme)</option><option value="solo">Solo (1 KI-Sänger)</option></select></label>
-          <label class="small"><input type="checkbox" id="countin" checked> Einzählen</label>
-        </div>
+        <button id="setBtn" aria-expanded="false" aria-controls="settings">⚙️ Einstellungen</button>
       </div>
       <input type="range" id="pos" min="1" max="2" step="0.01" value="1" style="margin-top:12px" aria-label="Position">
-      <div class="row" style="margin-top:8px">
-        <button id="giveBtn" title="Grundakkord und Anfangstöne jeder Stimme vorspielen">🎵 Töne angeben</button>
-        <label class="small"><input type="checkbox" id="giveAuto" checked> vor jedem Start</label>
-        <label class="small"><input type="checkbox" id="hum"> ansummen</label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label class="small"><input type="checkbox" id="loop"> Schleife von Takt</label>
-        <input type="number" id="loopA" min="1" value="1"> <span class="hint">bis</span>
-        <input type="number" id="loopB" min="1" value="4">
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label class="small"><input type="checkbox" id="clickOn"> 🥁 Klick</label>
-        <select id="clickDiv" aria-label="Klick-Raster"><option value="1">jeder Schlag</option><option value="2">jeder 2. Schlag</option><option value="bar">nur Takt-Eins</option><option value="0.5">Achtel</option></select>
-        <label class="small">laut <input type="range" id="clickVol" min="0.1" max="1.5" step="0.05" value="0.7" style="width:90px" aria-label="Klick-Lautstärke"></label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label class="small" title="Zählt vor jedem Einsatz deiner Stimme („Meine Stimme“) laut die Schläge des Takts vor, z. B. „drei, vier“."><input type="checkbox" id="cueSpeak" checked> 🗣 Einsätze vorzählen</label>
-        <label class="small">für <select id="cueVoice"></select></label>
-      </div>
       <p id="status" class="hint" style="margin:8px 0 0"></p>
+      <div id="settings" hidden>
+        <div><h3>Wiedergabe</h3><div class="row">
+          <label class="small">Tempo <select id="tempo"></select></label>
+          <label class="small" id="swingWrap"><input type="checkbox" id="swing"> Swing</label>
+          <label class="small">Gesangsklang <select id="style"><option value="chor">Chor (3 KI-Sänger je Stimme)</option><option value="solo">Einzelstimme (1 KI-Sänger)</option></select></label>
+        </div></div>
+        <div><h3>Stimmen</h3><div class="row">
+          <button id="allPiano">alle Klavier</button><button id="allSing">alle gesungen</button>
+          <span class="hint">Klang, stumm und Lautstärke je Stimme stehen jetzt unten bei den Stimmen.</span>
+        </div></div>
+        <div><h3>Start</h3><div class="row">
+          <label class="small"><input type="checkbox" id="countin" checked> Einzählen (Klick, ein Takt)</label>
+          <button id="giveBtn" title="Grundakkord und Anfangstöne jeder Stimme vorspielen">🎵 Töne angeben</button>
+          <label class="small"><input type="checkbox" id="giveAuto" checked> vor jedem Start</label>
+          <label class="small"><input type="checkbox" id="hum"> ansummen</label>
+        </div></div>
+        <div><h3>Üben</h3>
+          <div class="row">
+            <label class="small"><input type="checkbox" id="loop"> Schleife von Takt</label>
+            <input type="number" id="loopA" min="1" value="1"> <span class="hint">bis</span>
+            <input type="number" id="loopB" min="1" value="4">
+          </div>
+          <div class="row" style="margin-top:8px">
+            <label class="small"><input type="checkbox" id="clickOn"> 🥁 Klick mitlaufen</label>
+            <select id="clickDiv" aria-label="Klick-Raster"><option value="1">jeder Schlag</option><option value="2">jeder 2. Schlag</option><option value="bar">nur Takt-Eins</option><option value="0.5">Achtel</option></select>
+            <label class="small">laut <input type="range" id="clickVol" min="0.1" max="1.5" step="0.05" value="0.7" style="width:90px" aria-label="Klick-Lautstärke"></label>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <label class="small" title="Zählt vor jedem Einsatz deiner Stimme laut die Schläge des Takts vor, z. B. „drei, vier“."><input type="checkbox" id="cueSpeak" checked> 🗣 Einsätze vorzählen</label>
+            <label class="small">für <select id="cueVoice"></select></label>
+          </div>
+        </div>
+        <div><h3>Anzeige</h3><div class="row">
+          <label class="small"><input type="checkbox" id="markOn" checked> Eigene Stimme in den Noten markieren</label>
+        </div></div>
+      </div>
     </div>
 
     <div class="card">
-      <div class="row" style="justify-content:space-between;margin-bottom:4px">
-        <span class="hint">Andere Stimmen (nicht deine):</span>
-        <div class="row"><button id="allPiano">alle Klavier</button><button id="allSing">alle gesungen</button></div>
+      <b>Stimmen</b>
+      <div class="legend">
+        <div><b>🎤 Ich singe:</b> Deine Stimme ist stumm – du singst sie selbst. Sie läuft als Markierung in den Noten mit.</div>
+        <div><b>🔊 Solo:</b> Deine Stimme ist lauter, alle anderen Stimmen sind halb so laut.</div>
+        <div>Alle Stimmen werden am Klavier gespielt. Gesungen statt Klavier: unter ⚙️ Einstellungen.</div>
       </div>
+      <p id="voiceInfo"></p>
       <div id="voices"></div>
     </div>
 
     <div class="card">
       <div id="notation"><p class="hint" style="padding:12px">Noten werden gesetzt …</p></div>
-      <p class="hint" style="margin:8px 0 0">Bei „Meine Stimme“ wird die aktuelle Note wie mit einem Textmarker markiert. Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
+      <p class="hint" style="margin:8px 0 0">Bei „🎤 Ich singe“ und „🔊 Solo“ wird die aktuelle Note deiner Stimme wie mit einem Textmarker markiert (abschaltbar unter ⚙️ Einstellungen). Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
     </div>
 
     <p class="hint" id="note"></p>
@@ -369,7 +395,7 @@ async function setupScore() {
 function buildVoiceRows() {
   const box = $('voices'); box.innerHTML = '';
   if (ctx) { gains.forEach(g => g.disconnect()); gains = score.voices.map(() => { const g = ctx.createGain(); g.connect(master); return g; }); }
-  tracks = score.voices.map(v => ({ mine: false, solo: false, off: false, vol: 1, mode: 'piano', syl: v.notes.filter(n => n.lyric) }));
+  tracks = score.voices.map(v => ({ sing: false, solo: false, off: false, vol: 1, mode: 'piano', syl: v.notes.filter(n => n.lyric) }));
   $('cueVoice').innerHTML = score.voices.map((v, i) => `<option value="${i}">${esc(v.name)}</option>`).join('');
   computeEntries();
   score.voices.forEach((v, i) => {
@@ -377,34 +403,39 @@ function buildVoiceRows() {
     row.innerHTML = `<span class="dot" style="background:${COLORS()[i % 5]}"></span>
       <div><div class="vname">${esc(v.name)}</div><div class="vline" id="vline${i}">&nbsp;</div></div>
       <div class="vctl">
-        <button class="toggle" id="mine${i}" title="Meine Stimme: bleibt laut, wird markiert, Einsätze werden gezählt. Die anderen werden halb so laut.">⭐ Meine Stimme</button>
-        <button class="toggle" id="solo${i}" title="Nur diese Stimme hören">Solo</button>
-        <button class="toggle" id="off${i}" title="Diese Stimme stumm schalten" aria-label="${esc(v.name)} stumm">🔇</button>
-        <select id="mode${i}" aria-label="Wiedergabe ${esc(v.name)}"><option value="piano" selected>Klavier</option><option value="sing">gesungen</option><option value="both">gesungen + Klavier</option></select>
-        <input type="range" class="vol" id="vol${i}" min="0" max="1.5" step="0.05" value="1" aria-label="Lautstärke ${esc(v.name)}">
+        <button class="toggle" id="sing${i}" aria-pressed="false" title="Deine Stimme ist stumm – du singst sie selbst. Sie läuft als Markierung in den Noten mit.">🎤 Ich singe</button>
+        <button class="toggle" id="solo${i}" aria-pressed="false" title="Diese Stimme lauter, alle anderen halb so laut.">🔊 Solo</button>
+        <span class="vadv">
+          <button class="toggle" id="off${i}" title="Diese Stimme stumm schalten" aria-label="${esc(v.name)} stumm">🔇</button>
+          <select id="mode${i}" aria-label="Wiedergabe ${esc(v.name)}"><option value="piano" selected>Klavier</option><option value="sing">gesungen</option><option value="both">gesungen + Klavier</option></select>
+          <input type="range" class="vol" id="vol${i}" min="0" max="1.5" step="0.05" value="1" aria-label="Lautstärke ${esc(v.name)}">
+        </span>
       </div>`;
     box.appendChild(row);
-    $('mine' + i).onclick = () => {
-      const on = !tracks[i].mine;
-      tracks.forEach((t, j) => { t.mine = on && j === i; t.vol = !on ? 1 : (j === i ? 1 : 0.5); $('vol' + j).value = t.vol; });
-      if (on) $('cueVoice').value = i;
-      refreshVoices();
-    };
-    $('solo' + i).onclick = () => { tracks[i].solo = !tracks[i].solo; refreshVoices(); };
+    $('sing' + i).onclick = () => { const on = !tracks[i].sing; tracks.forEach((t, j) => { t.sing = on && j === i; if (on) t.solo = false; }); if (on) $('cueVoice').value = i; refreshVoices(); };
+    $('solo' + i).onclick = () => { const on = !tracks[i].solo; tracks.forEach((t, j) => { t.solo = on && j === i; if (on) t.sing = false; }); if (on) $('cueVoice').value = i; refreshVoices(); };
     $('off' + i).onclick = () => { tracks[i].off = !tracks[i].off; refreshVoices(); };
     $('mode' + i).onchange = e => { tracks[i].mode = e.target.value; applyGains(); };
     $('vol' + i).oninput = e => { tracks[i].vol = +e.target.value; applyGains(); };
   });
+  refreshVoices();
 }
 
-// solo wins over everything; otherwise a voice sounds unless it is switched off
-const audible = i => tracks.some(t => t.solo) ? tracks[i].solo : !tracks[i].off;
+// "Ich singe": own voice silent. "Solo": own voice louder (130 %), all others at 50 %. 🔇 silences a voice.
+const audible = i => !tracks[i].sing && !tracks[i].off;
+const effVol = i => !audible(i) ? 0 : tracks[i].vol * (tracks.some(t => t.solo) ? (tracks[i].solo ? 1.3 : 0.5) : 1);
 function refreshVoices() {
   tracks.forEach((t, j) => {
-    $('mine' + j).classList.toggle('on', t.mine); $('solo' + j).classList.toggle('pon', t.solo); $('off' + j).classList.toggle('on', t.off);
-    $('vrow' + j).classList.toggle('muted', !audible(j)); $('vrow' + j).classList.toggle('mine', t.mine);
+    $('sing' + j).classList.toggle('sing', t.sing); $('sing' + j).setAttribute('aria-pressed', t.sing);
+    $('solo' + j).classList.toggle('solo', t.solo); $('solo' + j).setAttribute('aria-pressed', t.solo);
+    $('off' + j).classList.toggle('on', t.off);
+    $('vrow' + j).classList.toggle('muted', !audible(j)); $('vrow' + j).classList.toggle('mine', t.sing || t.solo);
   });
-  applyGains(); lastHlBeat = -1; cueKey = ''; draw(curPosSec());
+  const si = tracks.findIndex(t => t.sing), so = tracks.findIndex(t => t.solo), vi = $('voiceInfo');
+  if (si >= 0) { vi.className = 'sing'; vi.textContent = `🎤 Du singst ${score.voices[si].name}: ${score.voices[si].name} ist stumm${$('markOn').checked ? ' und wird in den Noten markiert' : ''}.`; }
+  else if (so >= 0) { vi.className = 'solo'; vi.textContent = `🔊 Solo ${score.voices[so].name}: ${score.voices[so].name} lauter, alle anderen halb so laut.`; }
+  else { vi.className = ''; vi.textContent = 'Alle Stimmen gleich laut. Wähle bei deiner Stimme „🎤 Ich singe“ oder „🔊 Solo“.'; }
+  applyGains(); lastHlBeat = -1; cueKey = ''; if (score) draw(curPosSec());
 }
 const curStyle = () => $('style').value;
 const audioUrl = vi => STATIC ? STATIC.audio(vi, curTempoPct, curStyle())
@@ -435,7 +466,7 @@ function ensureCtx() {
   master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
   gains = score.voices.map(() => { const g = ctx.createGain(); g.connect(master); return g; });
 }
-function applyGains() { if (!ctx) return; gains.forEach((g, i) => g.gain.setTargetAtTime(!audible(i) || tracks[i].mode === 'piano' ? 0 : tracks[i].vol, ctx.currentTime, 0.02)); }
+function applyGains() { if (!ctx) return; gains.forEach((g, i) => g.gain.setTargetAtTime(tracks[i].mode === 'piano' ? 0 : effVol(i), ctx.currentTime, 0.02)); }
 
 // iPhone: Web Audio is silent when the ring/silent switch is on, unless the page plays media.
 let unlockEl = null;
@@ -479,8 +510,7 @@ async function play(withCountIn = true) {
   if (withCountIn && $('giveAuto').checked) { $('play').disabled = $('cuePlay').disabled = true; lead += await giveNotes(ctx.currentTime + lead) + 0.4; $('play').disabled = $('cuePlay').disabled = false; }
   if (withCountIn && $('countin').checked) {
     const beat = 60 / tempoBpm();
-    if ($('cueSpeak').checked) await loadCounts();
-    for (let k = 0; k < BPM(); k++) { const t = ctx.currentTime + lead + k * beat; if ($('cueSpeak').checked && countBufs[k + 1]) sayCount(t, k + 1); else click(t, k === 0); }
+    for (let k = 0; k < BPM(); k++) click(ctx.currentTime + lead + k * beat, k === 0);
     lead += BPM() * beat;
   }
   const when = ctx.currentTime + lead;
@@ -511,9 +541,12 @@ $('tempo').onchange = async e => { curTempoPct = +e.target.value; await loadAudi
 $('swing').onchange = () => loadAudio();
 $('style').onchange = () => loadAudio();
 $('cueVoice').onchange = () => { cueKey = ''; draw(curPosSec()); };
-const setOthers = mode => tracks.forEach((t, i) => { if (!t.mine) { t.mode = mode; $('mode' + i).value = mode; } }) || applyGains();
+const setOthers = mode => tracks.forEach((t, i) => { if (!t.sing) { t.mode = mode; $('mode' + i).value = mode; } }) || applyGains();
 $('allSing').onclick = () => setOthers('sing');
 $('allPiano').onclick = () => setOthers('piano');
+$('setBtn').onclick = () => { const st = $('settings'), open = st.hidden; st.hidden = !open; document.body.classList.toggle('adv', open); $('setBtn').setAttribute('aria-expanded', open); };
+try { if (localStorage.getItem('markOn') === '0') $('markOn').checked = false; } catch {}
+$('markOn').onchange = () => { try { localStorage.setItem('markOn', $('markOn').checked ? '1' : '0'); } catch {} lastHlBeat = -1; refreshVoices(); };
 $('giveBtn').onclick = async () => { await unlockAudio(); if (playing) stop(); await giveNotes(ctx.currentTime + 0.1); };
 
 // ---------- giving the starting notes, like a choir director ----------
@@ -581,7 +614,7 @@ function schedulePiano() {
         if (ns < a || ns >= b) continue;
         let j = k; while (v.notes[j].tie && v.notes[j + 1]) j++;
         const ne = b2s(v.notes[j].t + v.notes[j].d);
-        pianoNote(Math.max(ctx.currentTime, atCtx(ns, now, L)), ne - ns, n.midi, tracks[i].vol);
+        pianoNote(Math.max(ctx.currentTime, atCtx(ns, now, L)), ne - ns, n.midi, effVol(i));
       }
     });
   });
@@ -598,7 +631,7 @@ function schedulePiano() {
       }
     }
   }
-  if ($('cueSpeak').checked && tracks.some(t => t.mine)) { // only while someone sings a voice themselves
+  if ($('cueSpeak').checked && tracks.some(t => t.sing)) { // only while someone sings a voice themselves
     for (const c of cueCounts(+$('cueVoice').value)) {
       const ns = b2s(c.b); if (!inRange(ns)) continue;
       sayCount(Math.max(ctx.currentTime, atCtx(ns, now, L)), c.n);
@@ -647,10 +680,10 @@ function sayCount(t, n) {
 let cueKey = '';
 function drawCue(beats) {
   const vi = +$('cueVoice').value || 0, v = score.voices[vi]; if (!v) return;
-  if (!playing && !tracks.some(t => t.mine)) {
+  if (!playing && !tracks.some(t => t.sing || t.solo)) {
     const k0 = 'idle'; if (cueKey === k0) return; cueKey = k0;
     $('cue').className = ''; $('cueNum').textContent = '🎤'; $('cueMain').textContent = 'Einsätze';
-    $('cueSub').textContent = 'Tippe unten bei deiner Stimme auf „⭐ Meine Stimme“.'; $('cueBeats').innerHTML = ''; return;
+    $('cueSub').textContent = 'Tippe unten bei deiner Stimme auf „🎤 Ich singe“ oder „🔊 Solo“.'; $('cueBeats').innerHTML = ''; return;
   }
   let n = currentNote(vi, beats); const es = entries[vi] || [];
   if (!n) { // short breath rest inside a phrase: still "singing"
@@ -766,7 +799,7 @@ function highlight(beats) {
     for (let j = 0; j < ns.length; j++) { if (ns[j].t <= beats + 1e-6 && beats < ns[j].t + ns[j].d) { k = j; break; } if (ns[j].t > beats) break; }
     const el = k >= 0 && noteEls[st] ? noteEls[st][k] : null; if (!el) continue;
     if (!first) first = el;  // page follows the music even when nothing is marked
-    if (!tracks[st] || !tracks[st].mine) continue;  // marker only on "Meine Stimme"
+    if (!tracks[st] || !(tracks[st].sing || tracks[st].solo) || !$('markOn').checked) continue;  // marker only on the own voice
     el.classList.add('hl' + (st % 5)); hlIds.push(el);
     el.querySelectorAll('g.syl').forEach(s => { s.classList.add('hls'); hlIds.push(s); });
     marker(el, st);
