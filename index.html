@@ -1066,11 +1066,11 @@ async function recStart() {
   REC.active = true; document.body.classList.add('recording'); REC.timer = setInterval(recFrame, 40); applyGains();
 }
 function yin(b, sr) {
-  let r = 0; for (let i = 0; i < b.length; i++) r += b[i] * b[i]; if (Math.sqrt(r / b.length) < 0.004) return null;
+  let r = 0; for (let i = 0; i < b.length; i++) r += b[i] * b[i]; if (Math.sqrt(r / b.length) < 0.0012) return null;
   const W = b.length >> 1, tMin = Math.floor(sr / 1000), tMax = Math.min(W - 1, Math.floor(sr / 70)), d = new Float32Array(tMax + 1);
   for (let t = 1; t <= tMax; t++) { let s = 0; for (let i = 0; i < W; i++) { const x = b[i] - b[i + t]; s += x * x; } d[t] = s; }
   let run = 0; d[0] = 1; for (let t = 1; t <= tMax; t++) { run += d[t]; d[t] = run ? d[t] * t / run : 1; }
-  let tau = -1; for (let t = tMin; t <= tMax; t++) { if (d[t] < 0.15) { while (t < tMax && d[t + 1] < d[t]) t++; tau = t; break; } }
+  let tau = -1; for (let t = tMin; t <= tMax; t++) { if (d[t] < 0.18) { while (t < tMax && d[t + 1] < d[t]) t++; tau = t; break; } }
   if (tau < 0) return null; let bt = tau;
   if (tau > 1 && tau < tMax) { const a = d[tau - 1], c = d[tau], e = d[tau + 1], den = a + e - 2 * c; if (den) bt = tau + (a - e) / (2 * den); }
   return sr / bt;
