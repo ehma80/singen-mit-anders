@@ -5,8 +5,10 @@ Chor-Übungs-App: Noten hochladen → jede Stimme wird **mit Text** vorgesungen 
 Die App läuft kostenlos auf **GitHub Pages**. Noten und Aufnahmen liegen dort nur **verschlüsselt** – ohne das Chor-Passwort kann niemand etwas damit anfangen, auch wenn das Repository öffentlich ist.
 
 ## Adressen
-- Für die Sängerinnen: `https://ehma80.github.io/singen-mit-anders/`
-- Für die Chorleitung (mit Hochladen): `https://ehma80.github.io/singen-mit-anders/#chorleitung`
+- Für die Sängerinnen: `https://lieder.grammarbox.de/` (auch im Singtrainer unter „Unsere Lieder“)
+- Für die Chorleitung (mit Hochladen): `https://lieder.grammarbox.de/#chorleitung`
+- Ein Stück direkt öffnen: `https://lieder.grammarbox.de/#jungs-die-singen`
+- Die alte Adresse `ehma80.github.io/singen-mit-anders/` leitet automatisch weiter. Die eigene Domain steht in der Datei `CNAME` im Branch `site`.
 
 ## Einmalig einrichten
 1. **Passwort festlegen:** Repository → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*.
