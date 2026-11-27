@@ -8,6 +8,7 @@ Die App läuft kostenlos auf **GitHub Pages**. Noten und Aufnahmen liegen dort n
 - Für die Sängerinnen: `https://lieder.grammarbox.de/` (auch im Singtrainer unter „Unsere Lieder“)
 - Für die Chorleitung (mit Hochladen): `https://lieder.grammarbox.de/#chorleitung`
 - Ein Stück direkt öffnen: `https://lieder.grammarbox.de/#jungs-die-singen`
+- Öffentlich ist nur die Titelliste `titles.json` (Titel und Stimmen, für die Startseite des Singtrainers). Noten und Aufnahmen bleiben verschlüsselt.
 - Die alte Adresse `ehma80.github.io/singen-mit-anders/` leitet automatisch weiter. Die eigene Domain steht in der Datei `CNAME` im Branch `site`.
 
 ## Einmalig einrichten

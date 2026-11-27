@@ -81,6 +81,8 @@ for x in list(lib):
     if x['id'] not in wanted:
         print('entfernt:', x['id']); shutil.rmtree(os.path.join(site, 'songs', x['id']), ignore_errors=True); lib.remove(x)
 json.dump(lib, open(libp, 'w'), ensure_ascii=False, indent=1)
+# Öffentliche Titelliste (nur Titel und Stimmen, keine Noten/Aufnahmen) für die Startseite des Singtrainers
+json.dump([dict(id=x['id'], title=x['title'], voices=x.get('voices', [])) for x in lib], open(os.path.join(site, 'titles.json'), 'w'), ensure_ascii=False)
 if PW:
     open(libp + '.bin', 'wb').write(cc.encrypt(open(libp, 'rb').read(), key, salt))
     os.unlink(libp)
