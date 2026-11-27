@@ -100,6 +100,9 @@
   #fPlay svg { width:24px; height:24px; fill:#fff; }
   #fMeas { min-width:5.5em; text-align:center; font-size:.85rem; }
   @media (max-width:420px) { #fbar { gap:6px; } #fbar button { padding:4px 8px; } #fMeas { min-width:4em; } }
+  .toprow { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .homebtn { display:inline-flex; align-items:center; min-height:40px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink); text-decoration:none; font-weight:600; font-size:.92rem; white-space:nowrap; }
+  .homebtn:hover { border-color:var(--acc); }
   .brand { font-size:.8rem; font-weight:700; letter-spacing:.02em; color:var(--acc); margin-bottom:2px; }
 </style>
 </head>
@@ -108,7 +111,7 @@
 <input id="gatePw" type="password" autocomplete="current-password" placeholder="Passwort"><button type="submit">Öffnen</button>
 <p id="gateMsg" class="hint"></p><p class="hint">Das Passwort wird auf diesem Gerät gemerkt.</p></form></div>
 <main>
-  <div class="brand">🎵 Singen mit anders</div>
+  <div class="toprow"><div class="brand">🎵 Singen mit anders</div><a class="homebtn" href="https://singtrainer.grammarbox.de/">← Zum Singtrainer</a></div>
   <h1 id="title">Singen mit anders</h1>
   <div class="sub" id="subtitle">Noten hochladen, alle Stimmen anhören, eine Stimme ausschalten und selbst singen.</div>
 
