@@ -1065,6 +1065,10 @@ async function recStart() {
   try { REC.mr = new MediaRecorder(stream); REC.mr.ondataavailable = e => { if (e.data && e.data.size) REC.chunks.push(e.data); }; REC.mr.start(); } catch { REC.mr = null; }
   REC.active = true; document.body.classList.add('recording'); REC.timer = setInterval(recFrame, 40); applyGains();
 }
+// Mikrofon schließen, sobald die App verlassen wird: laufende Aufnahme wird beendet und ausgewertet
+function releaseMic() { if (REC.active) { stop(); return; } if (REC.stream) { try { REC.stream.getTracks().forEach(t => t.stop()); } catch {} REC.stream = null; } }
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseMic(); });
+window.addEventListener('pagehide', releaseMic);
 function yin(b, sr) {
   let r = 0; for (let i = 0; i < b.length; i++) r += b[i] * b[i]; if (Math.sqrt(r / b.length) < 0.0012) return null;
   const W = b.length >> 1, tMin = Math.floor(sr / 1000), tMax = Math.min(W - 1, Math.floor(sr / 70)), d = new Float32Array(tMax + 1);
