@@ -216,7 +216,7 @@ document.getElementById('fPlay').innerHTML = PLAY_SVG;
 const $ = id => document.getElementById(id);
 let score = null, ctx = null, master = null, buffers = [], gains = [], sources = [], tracks = [];
 let playing = false, startCtxTime = 0, startPosSec = 0, rafId = 0, schedTimer = 0, lastSched = 0;
-let curTempoPct = 100, tk = null, noteStaff = {}, noteBeat = {}, noteEls = [], hlIds = [], lastHlBeat = -1, lastPageTop = -1;
+let markers = [], curTempoPct = 100, tk = null, noteStaff = {}, noteBeat = {}, noteEls = [], hlIds = [], lastHlBeat = -1, lastPageTop = -1;
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const COLORS = () => ['--v0','--v1','--v2','--v3','--v4'].map(css);
 const MSPB = 500; // Verovio default tempo 120 → 500 ms per beat
@@ -555,9 +555,10 @@ function stop() {
   startPosSec = Math.max(0, curPosSec());
   sources.forEach(s => { try { s.stop(); } catch {} }); sources = [];
   playing = false; clearInterval(schedTimer); cancelAnimationFrame(rafId);
+  if (renderPending) { renderPending = false; setTimeout(maybeRerender, 50); }
   $('play').textContent = '▶ Abspielen'; $('cuePlay').innerHTML = $('fPlay').innerHTML = PLAY_SVG; $('cuePlay').setAttribute('aria-label', 'Abspielen'); $('fPlay').setAttribute('aria-label', 'Abspielen');
 }
-function seekBeats(b) { const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); draw(startPosSec); if (was) play(false); }
+function seekBeats(b) { const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); lastSys = null; draw(startPosSec); followPage(Math.max(0, b), true); if (was) play(false); }
 $('play').onclick = $('cuePlay').onclick = () => playing ? stop() : play(true);
 $('back').onclick = () => { const L = loopRange(); seekBeats(L ? posToBeats(L[0]) : 0); };
 $('pos').oninput = e => seekBeats((+e.target.value - 1) * BPM());
@@ -572,7 +573,7 @@ $('allPiano').onclick = () => setOthers('piano');
 function setFocus(on) {
   if (document.body.classList.contains('focus') === on) return;
   document.body.classList.toggle('focus', on); $('fbar').hidden = !on;
-  setTimeout(() => { if (score && tk) renderNotation(); }, 60);
+  lastSys = null; setTimeout(() => { followPage(posToBeats(curPosSec()), true); maybeRerender(); }, 80);
 }
 $('focusBtn').onclick = () => setFocus(true);
 $('fExit').onclick = () => setFocus(false);
@@ -638,7 +639,7 @@ function click(t, strong, vol = 1, freq) {
 }
 function schedulePiano() {
   if (!playing) return;
-  const now = curPosSec(), to = now + 0.25, L = loopRange(), ranges = [];
+  const now = curPosSec(), to = now + 0.6, L = loopRange(), ranges = [];
   if (L && to > L[1]) { ranges.push([lastSched, L[1]]); ranges.push([L[0], L[0] + (to - L[1])]); lastSched = L[0] + (to - L[1]); }
   else { ranges.push([lastSched, to]); lastSched = to; }
   score.voices.forEach((v, i) => {
@@ -806,6 +807,7 @@ async function renderNotation() {
       els.forEach((el, k) => { if (ns[k]) { noteBeat[el.id] = ns[k].t; noteEls[vi][k] = el; } });
     });
     const measures = [...box.querySelectorAll('g.measure')];
+    measSys = measures.map(m => m.closest('g.system') || m); lastSys = null; hlKey = ''; markers = [];
     const tapAt = beats => { seekBeats(beats); if (!playing) play(false); };
     box.onclick = ev => {
       const note = ev.target.closest && ev.target.closest('g.note');
@@ -816,35 +818,54 @@ async function renderNotation() {
         if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top - 6 && ev.clientY <= r.bottom + 6) { tapAt(i * BPM()); return; }
       }
     };
-    lastHlBeat = -1; lastPageTop = -1; highlight(posToBeats(curPosSec()));
+    lastHlBeat = -1; lastPageTop = -1; renderedW = box.clientWidth; highlight(posToBeats(curPosSec())); followPage(posToBeats(curPosSec()), true);
   } catch (e) { box.innerHTML = '<p class="err" style="padding:12px">Noten konnten nicht angezeigt werden: ' + esc(String(e.message || e)) + '</p>'; }
 }
 let resizeT = 0;
-window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => score && tk && renderNotation(), 400); });
+let renderedW = 0, renderPending = false;
+function maybeRerender() { if (!score || !tk) return; const w = $('notation').clientWidth; if (Math.abs(w - renderedW) < 40) return; if (playing) { renderPending = true; return; } renderNotation(); }
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(maybeRerender, 500); }); // iPhone toolbar changes only the height → no expensive re-render
 
+let hlKey = '';
 function highlight(beats) {
   if (!tk || Math.abs(beats - lastHlBeat) < 0.02) return;
   lastHlBeat = beats;
+  const mark = $('markOn').checked, idx = [];
+  for (let st = 0; st < score.voices.length; st++) {
+    if (!mark || !tracks[st] || !(tracks[st].sing || tracks[st].solo)) { idx.push(-1); continue; }
+    const ns = score.voices[st].notes; let k = -1;
+    for (let j = 0; j < ns.length; j++) { if (ns[j].t <= beats + 1e-6 && beats < ns[j].t + ns[j].d) { k = j; break; } if (ns[j].t > beats) break; }
+    idx.push(k);
+  }
+  const key = idx.join(',') + (mark ? 'm' : '');
+  if (key === hlKey) return; hlKey = key;   // nothing changed → no DOM work (keeps audio and scrolling smooth)
   hlIds.forEach(el => el.classList.remove('hl0', 'hl1', 'hl2', 'hl3', 'hl4', 'hls'));
   hlIds = [];
-  document.querySelectorAll('#notation rect.marker').forEach(r => r.remove());
-  let first = null;
-  for (let st = 0; st < score.voices.length; st++) {
-    const ns = score.voices[st].notes;
-    let k = -1;
-    for (let j = 0; j < ns.length; j++) { if (ns[j].t <= beats + 1e-6 && beats < ns[j].t + ns[j].d) { k = j; break; } if (ns[j].t > beats) break; }
-    const el = k >= 0 && noteEls[st] ? noteEls[st][k] : null; if (!el) continue;
-    if (!first) first = el;  // page follows the music even when nothing is marked
-    if (!tracks[st] || !(tracks[st].sing || tracks[st].solo) || !$('markOn').checked) continue;  // marker only on the own voice
+  markers.forEach(r => r.remove()); markers = [];
+  idx.forEach((k, st) => {
+    const el = k >= 0 && noteEls[st] ? noteEls[st][k] : null; if (!el) return;
     el.classList.add('hl' + (st % 5)); hlIds.push(el);
     el.querySelectorAll('g.syl').forEach(s => { s.classList.add('hls'); hlIds.push(s); });
     marker(el, st);
-  }
-  if (first && playing) {
-    const box = $('notation'), sys = first.closest('g.system') || first;
-    const r = sys.getBoundingClientRect(), br = box.getBoundingClientRect();
-    if (r.top < br.top + 4 || r.bottom > br.bottom - 4) box.scrollTo({ top: box.scrollTop + r.top - br.top - 10, behavior: 'smooth' });
-  }
+  });
+}
+// page turning: follow the bar that is playing, keep its line at the top so the next lines are visible below
+let measSys = [], lastSys = null, scrollAnim = 0;
+function followPage(beats, force) {
+  if (!measSys.length || (!playing && !force)) return;
+  const m = Math.max(0, Math.min(measSys.length - 1, Math.floor(beats / BPM() + 1e-6)));
+  const sys = measSys[m]; if (!sys || (sys === lastSys && !force)) return;
+  lastSys = sys;
+  const box = $('notation'), r = sys.getBoundingClientRect(), br = box.getBoundingClientRect();
+  const target = Math.max(0, box.scrollTop + r.top - br.top - 8);
+  if (Math.abs(target - box.scrollTop) < 4) return;
+  smoothScroll(box, target);
+}
+function smoothScroll(box, target) { // own animation: reliable on iPhone, never fights with a running one
+  cancelAnimationFrame(scrollAnim);
+  const from = box.scrollTop, d = target - from, t0 = performance.now(), dur = 350;
+  const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); box.scrollTop = from + d * e; if (k < 1) scrollAnim = requestAnimationFrame(step); };
+  scrollAnim = requestAnimationFrame(step);
 }
 
 // highlighter-pen look: a translucent colored band behind the notehead and behind its syllable
@@ -859,7 +880,7 @@ function marker(el, st) {
     r.setAttribute('width', b.width + 2 * padX); r.setAttribute('height', b.height + 2 * padY);
     r.setAttribute('rx', Math.min(b.height, b.width) * 0.35 + padY);
     r.style.fill = color;
-    el.parentNode.insertBefore(r, el);
+    el.parentNode.insertBefore(r, el); markers.push(r);
   };
   const head = el.querySelector('g.notehead') || el;
   let hb; try { hb = head.getBBox(); } catch { return; }
@@ -887,6 +908,7 @@ function draw(p) {
   score.voices.forEach((v, i) => {
     const S = tracks[i].syl; let k = -1;
     for (let j = 0; j < S.length; j++) { if (S[j].t <= beats + 0.02) k = j; else break; }
+    if (tracks[i].lastK === k) return; tracks[i].lastK = k;
     let html = '';
     for (let j = Math.max(0, k - 2); j < Math.min(S.length, k + 12); j++) {
       const sep = S[j].hyph ? '-' : ' ';
@@ -895,6 +917,7 @@ function draw(p) {
     $('vline' + i).innerHTML = html || '&nbsp;';
   });
   highlight(beats);
+  followPage(beats);
   drawCue(beats);
   curBeats = beats;
 }
