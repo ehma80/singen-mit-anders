@@ -87,6 +87,47 @@
   #setBtn[aria-expanded=true] { border-color:var(--acc); color:var(--acc); }
   #settings { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; display:grid; gap:12px; }
   #settings h3 { font-size:.8rem; text-transform:none; color:var(--mute); margin:0 0 4px; }
+  /* Schritte */
+  #steps { display:flex; gap:6px; margin:6px 0 14px; }
+  #steps button { flex:1; border-radius:999px; font-weight:700; font-size:.9rem; color:var(--mute); }
+  #steps button[aria-current=step] { background:var(--acc); color:#fff; border-color:var(--acc); }
+  #steps button:disabled { opacity:.45; }
+  .stitle { font-size:1.25rem; margin:4px 0 8px; }
+  .vpick { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin:8px 0 14px; }
+  .vpick button { display:flex; align-items:center; gap:10px; min-height:64px; font-size:1.1rem; font-weight:700; text-align:left; border-radius:14px; border-width:2px; }
+  .vpick .dot { width:16px; height:16px; flex:none; }
+  .linkbtn { background:none; border:0; color:var(--acc); font-weight:600; padding:6px 0; }
+  .modes { display:grid; gap:10px; margin:8px 0 12px; }
+  .mode { text-align:left; display:grid; gap:2px; padding:12px 14px; border-radius:14px; border-width:2px; }
+  .mode span { color:var(--mute); font-size:.9rem; }
+  .mode[aria-pressed=true] { border-color:var(--acc); box-shadow:0 0 0 2px color-mix(in srgb, var(--acc) 30%, transparent); }
+  .mode:disabled { opacity:.4; }
+  .recopt { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:2px dashed var(--line); border-radius:14px; margin-bottom:12px; cursor:pointer; }
+  .recopt input { width:24px; height:24px; flex:none; accent-color:var(--warn); margin-top:2px; }
+  .recopt small { display:block; color:var(--mute); font-size:.85rem; margin-top:2px; }
+  .recopt.on { border-style:solid; border-color:var(--warn); }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; min-height:36px; } .seg button[aria-pressed=true] { background:var(--ink); color:var(--bg); }
+  .s3opts { margin-bottom:14px; }
+  .bigbtn { width:100%; min-height:56px; font-size:1.15rem; border-radius:14px; margin-bottom:14px; }
+  #more { margin-top:6px; } #more summary { cursor:pointer; font-weight:600; padding:10px 0; color:var(--acc); }
+  body:not(.focus) #player { position:absolute; left:-10000px; top:0; width:calc(100% - 32px); max-width:948px; visibility:hidden; }
+  /* Auswertung */
+  .rsum { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .rscore { font-size:2.6rem; font-weight:800; line-height:1; }
+  .bars { display:flex; flex-wrap:wrap; gap:3px; margin:10px 0; }
+  .bars button { width:22px; height:22px; min-height:22px; padding:0; border-radius:5px; border:0; font-size:9px; color:#fff; }
+  .b-ok { background:var(--ok); } .b-mid { background:#d9a21b; } .b-bad { background:var(--warn); } .b-miss { background:var(--line); color:var(--mute) !important; } .b-none { background:transparent; outline:1px dashed var(--line); }
+  .prob { border-top:1px solid var(--line); padding:10px 0; display:grid; gap:6px; }
+  .tips li { margin:4px 0; }
+  #notation g.note.r-ok, #notation g.note.r-ok * { fill:var(--ok) !important; }
+  #notation g.note.r-mid, #notation g.note.r-mid * { fill:#d9a21b !important; }
+  #notation g.note.r-bad, #notation g.note.r-bad * { fill:var(--warn) !important; }
+  #notation g.note.r-miss, #notation g.note.r-miss * { fill:#9a9aa0 !important; }
+  #recDot { display:none; color:var(--warn); font-weight:700; font-size:.85rem; align-items:center; gap:6px; }
+  body.recording #recDot { display:inline-flex; }
+  #recDot::before { content:''; width:10px; height:10px; border-radius:50%; background:var(--warn); animation:blink 1s infinite; }
+  @keyframes blink { 50% { opacity:.2; } }
   /* Vollbild-Notenblatt zum Üben */
   body.focus { overflow:hidden; }
   body.focus main > *:not(#player), body.focus #player > *:not(#noteCard):not(#fbar), body.focus #noteCard > p { display:none !important; }
@@ -115,6 +156,9 @@
   <h1 id="title">Singen mit anders</h1>
   <div class="sub" id="subtitle">Noten hochladen, alle Stimmen anhören, eine Stimme ausschalten und selbst singen.</div>
 
+  <nav id="steps" aria-label="Schritte"><button data-step="1">1 · Lied</button><button data-step="2">2 · Stimme</button><button data-step="3">3 · Üben</button></nav>
+  <section id="step1" class="step">
+  <h2 class="stitle">Wähle dein Lied</h2>
   <div class="card" id="libCard">
     <div class="row" style="justify-content:space-between"><b>Bibliothek</b><span class="hint" id="libCount"></span></div>
     <div class="songs" id="songs"><p class="hint">Lade Bibliothek …</p></div>
@@ -128,9 +172,31 @@
       <div id="pending"></div>
     </div>
   </div>
+  </section>
 
-  <div id="player" hidden>
-    <div id="cue"><button class="primary" id="cuePlay" aria-label="Abspielen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Tippe unten bei deiner Stimme auf „🎤 Ich singe“ oder „🔊 Solo“.</div></div><div class="beats" id="cueBeats"></div></div>
+  <section id="step2" class="step" hidden>
+    <h2 class="stitle">Wähle deine Stimme</h2>
+    <p class="sub" id="s2sub"></p>
+    <div class="vpick" id="voicePick"></div>
+    <button class="linkbtn" id="listenOnly">Ich möchte nur zuhören →</button>
+  </section>
+
+  <section id="step3" class="step" hidden>
+    <h2 class="stitle">Wie möchtest du üben?</h2>
+    <p class="sub" id="s3sub"></p>
+    <div class="modes" id="modes">
+      <button class="mode" data-mode="sing"><b>🎤 Ich singe</b><span>Deine Stimme ist stumm – du singst sie selbst. Sie läuft als Markierung in den Noten mit.</span></button>
+      <button class="mode" data-mode="solo"><b>🔊 Solo</b><span>Deine Stimme ist lauter, alle anderen sind halb so laut – gut zum Lernen.</span></button>
+      <button class="mode" data-mode="listen"><b>🎧 Nur anhören</b><span>Alle Stimmen gleich laut, zum Kennenlernen des Stücks.</span></button>
+    </div>
+    <label class="recopt" id="recWrap"><input type="checkbox" id="recOn"><span><b>🎙 Mich aufnehmen und auswerten lassen</b><small>Die anderen Stimmen laufen leise im Hintergrund. Danach bekommst du Tipps, welche Stellen noch ungenau sind. Am besten mit Kopfhörern. Die Aufnahme bleibt auf deinem Gerät.</small></span></label>
+    <div class="row s3opts">
+      <span class="small">Klang</span><span class="seg" id="sound3"><button data-snd="piano">Klavier</button><button data-snd="sing">gesungen</button></span>
+      <label class="small">Tempo <select id="tempo3"></select></label>
+    </div>
+    <button class="primary bigbtn" id="goBtn">Los geht's – singen! ▶</button>
+    <div id="recRes" class="card" hidden></div>
+    <details id="more"><summary>⚙️ Weitere Einstellungen</summary>
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <div class="row">
@@ -193,6 +259,11 @@
       <div id="voices"></div>
     </div>
 
+    </details>
+  </section>
+
+  <div id="player" hidden>
+    <div id="cue"><button class="primary" id="cuePlay" aria-label="Abspielen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button><div id="cueNum">–</div><div id="cueTxt"><div id="cueMain">Einsätze</div><div id="cueSub">Wähle deine Stimme.</div></div><div class="beats" id="cueBeats"></div></div>
     <div class="card" id="noteCard">
       <div id="notation"><p class="hint" style="padding:12px">Noten werden gesetzt …</p></div>
       <p class="hint" style="margin:8px 0 0">Bei „🎤 Ich singe“ und „🔊 Solo“ wird die aktuelle Note deiner Stimme wie mit einem Textmarker markiert (abschaltbar unter ⚙️ Einstellungen). Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
@@ -203,7 +274,7 @@
       <button id="fBack" aria-label="Einen Takt zurück">⏪<span>Takt zurück</span></button>
       <button class="primary" id="fPlay" aria-label="Abspielen"></button>
       <button id="fStop" aria-label="Stopp und zum Anfang">⏹<span>Stopp</span></button>
-      <span class="meas" id="fMeas"></span>
+      <span class="meas" id="fMeas"></span><span id="recDot">REC</span>
       <button id="fExit" aria-label="Vollbild verlassen">✕<span>Schließen</span></button>
     </div>
   </div>
@@ -305,6 +376,7 @@ async function init() {
   const want = LIBMODE ? location.hash.slice(1).replace('chorleitung', '') : new URLSearchParams(location.search).get('id');
   const pick = library.find(x => x.id === want) || library[0];
   if (pick) await openSong(pick.id);
+  goStep(pick && pick.id === want ? 2 : 1);
   if (LIBMODE) initAssets();
 }
 async function loadLibrary() {
@@ -317,7 +389,7 @@ function renderLibrary() {
   $('libCount').textContent = library.length === 1 ? '1 Stück' : library.length + ' Stücke';
   $('songs').innerHTML = library.length ? library.map(x => `<button class="song ${x.id === curSongId ? 'cur' : ''}" data-id="${esc(x.id)}">${esc(x.title)}<small>${esc(x.voices.join(' · '))} · ${x.measures} Takte${x.ready === false ? ' · wird eingesungen …' : ''}</small></button>`).join('')
     : '<p class="hint">Noch keine Stücke.</p>';
-  $('songs').querySelectorAll('.song').forEach(b => b.onclick = () => openSong(b.dataset.id));
+  $('songs').querySelectorAll('.song').forEach(b => b.onclick = async () => { await openSong(b.dataset.id); SEL.voice = null; goStep(2); });
 }
 async function openSong(id) {
   stop(); for (const k in humCache) delete humCache[k];
@@ -332,6 +404,7 @@ async function openSong(id) {
     $('tempo').innerHTML = STATIC.tempos.map(p => `<option value="${p}">${p} %</option>`).join('');
     curTempoPct = STATIC.tempos.includes(keep) ? keep : (STATIC.tempos.includes(100) ? 100 : STATIC.tempos[STATIC.tempos.length - 1]);
     $('tempo').value = curTempoPct;
+    $('tempo3').innerHTML = $('tempo').innerHTML; $('tempo3').value = curTempoPct;
     score = STATIC.score;
   } else {
     if (!$('tempo').options.length) $('tempo').innerHTML = [50, 60, 70, 80, 90, 100, 110].map(p => `<option value="${p}" ${p === 100 ? 'selected' : ''}>${p} %</option>`).join('');
@@ -414,6 +487,7 @@ async function setupScore() {
   $('pos').max = score.measures + 0.99;
   $('loopB').value = Math.min(4, score.measures); $('loopA').max = $('loopB').max = score.measures;
   buildVoiceRows();
+  renderVoicePick(); $('recRes').hidden = true;
   renderNotation();
   await loadAudio();
   draw(0);
@@ -450,7 +524,7 @@ function buildVoiceRows() {
 
 // "Ich singe": own voice silent. "Solo": own voice louder (130 %), all others at 50 %. 🔇 silences a voice.
 const audible = i => !tracks[i].sing && !tracks[i].off;
-const effVol = i => !audible(i) ? 0 : tracks[i].vol * (tracks.some(t => t.solo) ? (tracks[i].solo ? 1.3 : 0.5) : 1);
+const effVol = i => !audible(i) ? 0 : tracks[i].vol * (tracks.some(t => t.solo) ? (tracks[i].solo ? 1.3 : 0.5) : 1) * (REC.active ? 0.4 : 1);
 function refreshVoices() {
   tracks.forEach((t, j) => {
     $('sing' + j).classList.toggle('sing', t.sing); $('sing' + j).setAttribute('aria-pressed', t.sing);
@@ -504,7 +578,7 @@ function silentWavUrl() {
   return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
 }
 async function unlockAudio() {
-  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
+  try { if (navigator.audioSession) navigator.audioSession.type = REC.stream ? 'play-and-record' : 'playback'; } catch {}
   try { if (!unlockEl) { unlockEl = new Audio(silentWavUrl()); unlockEl.loop = true; unlockEl.setAttribute('playsinline', ''); } unlockEl.play().catch(() => {}); } catch {}
   ensureCtx();
   try { if (ctx.state !== 'running') await ctx.resume(); } catch {}
@@ -548,6 +622,7 @@ async function play(withCountIn = true) {
     s.start(when, startPosSec); return s;
   });
   startCtxTime = when; playing = true; lastSched = startPosSec;
+  if (REC.active && !REC.started) { REC.started = true; REC.t0 = when; REC.p0 = startPosSec; }
   $('play').textContent = '⏸ Pause'; $('cuePlay').innerHTML = $('fPlay').innerHTML = PAUSE_SVG; $('cuePlay').setAttribute('aria-label', 'Pause'); $('fPlay').setAttribute('aria-label', 'Pause');
   setFocus(true);
   schedTimer = setInterval(schedulePiano, 50);
@@ -559,9 +634,10 @@ function stop() {
   sources.forEach(s => { try { s.stop(); } catch {} }); sources = [];
   playing = false; clearInterval(schedTimer); cancelAnimationFrame(rafId);
   if (renderPending) { renderPending = false; setTimeout(maybeRerender, 50); }
+  if (REC.active) { REC.pEnd = startPosSec; setTimeout(finishTake, 0); }
   $('play').textContent = '▶ Abspielen'; $('cuePlay').innerHTML = $('fPlay').innerHTML = PLAY_SVG; $('cuePlay').setAttribute('aria-label', 'Abspielen'); $('fPlay').setAttribute('aria-label', 'Abspielen');
 }
-function seekBeats(b) { const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); lastSys = null; draw(startPosSec); followPage(Math.max(0, b), true); if (was) play(false); }
+function seekBeats(b) { if (REC.active) { stop(); return; } const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); lastSys = null; draw(startPosSec); followPage(Math.max(0, b), true); if (was) play(false); }
 $('play').onclick = $('cuePlay').onclick = () => playing ? stop() : play(true);
 $('back').onclick = () => { const L = loopRange(); seekBeats(L ? posToBeats(L[0]) : 0); };
 $('pos').oninput = e => seekBeats((+e.target.value - 1) * BPM());
@@ -579,7 +655,7 @@ function setFocus(on) {
   lastSys = null; setTimeout(() => { followPage(posToBeats(curPosSec()), true); maybeRerender(); }, 80);
 }
 $('focusBtn').onclick = () => setFocus(true);
-$('fExit').onclick = () => setFocus(false);
+$('fExit').onclick = () => { if (REC.active) { stop(); return; } stop(); setFocus(false); goStep(3); };
 $('fPlay').onclick = () => playing ? stop() : play(true);
 $('fStop').onclick = () => { stop(); const L = loopRange(); startPosSec = L ? L[0] : 0; lastHlBeat = -1; draw(startPosSec); };
 $('fBack').onclick = () => { const b = posToBeats(curPosSec()), bar = Math.floor(b / BPM() + 1e-6), into = b - bar * BPM(); seekBeats(Math.max(0, (into > 0.5 ? bar : bar - 1) * BPM())); };
@@ -927,6 +1003,172 @@ function draw(p) {
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 let curBeats = 0;
+
+// ---------- Schritte: Lied → Stimme → Übungsart → Vollbild ----------
+const SEL = { voice: null, mode: 'sing', snd: 'piano' };
+function goStep(n) {
+  if (n >= 2 && !score) n = 1; if (n === 3 && SEL.voice == null) n = 2;
+  [1, 2, 3].forEach(k => $('step' + k).hidden = k !== n);
+  document.querySelectorAll('#steps button').forEach(b => { const k = +b.dataset.step; b.setAttribute('aria-current', k === n ? 'step' : 'false'); b.disabled = (k >= 2 && !score) || (k === 3 && SEL.voice == null); });
+  if (n === 3) renderStep3();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('#steps button').forEach(b => b.onclick = () => goStep(+b.dataset.step));
+function renderVoicePick() {
+  $('s2sub').textContent = score.title + ' · ' + score.voices.length + ' Stimmen';
+  $('voicePick').innerHTML = score.voices.map((v, i) => `<button data-v="${i}" aria-pressed="${SEL.voice === i}"><span class="dot" style="background:${COLORS()[i % 5]}"></span>${esc(v.name)}</button>`).join('');
+  $('voicePick').querySelectorAll('button').forEach(b => b.onclick = () => { SEL.voice = +b.dataset.v; if (SEL.mode === 'listen') SEL.mode = 'sing'; goStep(3); });
+}
+$('listenOnly').onclick = () => { SEL.voice = -1; SEL.mode = 'listen'; goStep(3); };
+function renderStep3() {
+  const v = SEL.voice >= 0 ? score.voices[SEL.voice].name : null;
+  $('s3sub').textContent = score.title + ' · ' + (v ? 'Stimme ' + v : 'alle Stimmen');
+  document.querySelectorAll('#modes .mode').forEach(b => { const m = b.dataset.mode; b.disabled = !v && m !== 'listen'; b.setAttribute('aria-pressed', m === SEL.mode); });
+  $('recWrap').hidden = SEL.mode !== 'sing'; $('recWrap').classList.toggle('on', $('recOn').checked);
+  document.querySelectorAll('#sound3 button').forEach(b => b.setAttribute('aria-pressed', b.dataset.snd === SEL.snd));
+  $('goBtn').textContent = SEL.mode === 'sing' && $('recOn').checked ? '🎙 Los geht\'s – aufnehmen und singen!' : 'Los geht\'s – ' + (SEL.mode === 'listen' ? 'anhören!' : 'singen!') + ' ▶';
+}
+document.querySelectorAll('#modes .mode').forEach(b => b.onclick = () => { SEL.mode = b.dataset.mode; renderStep3(); });
+document.querySelectorAll('#sound3 button').forEach(b => b.onclick = () => { SEL.snd = b.dataset.snd; renderStep3(); });
+$('recOn').onchange = renderStep3;
+$('tempo3').onchange = e => { $('tempo').value = e.target.value; $('tempo').onchange({ target: $('tempo') }); };
+function applySelection() {
+  tracks.forEach((t, i) => { t.sing = false; t.solo = false; t.mode = SEL.snd; $('mode' + i).value = SEL.snd; });
+  if (SEL.voice >= 0) { if (SEL.mode === 'sing') tracks[SEL.voice].sing = true; else if (SEL.mode === 'solo') tracks[SEL.voice].solo = true; $('cueVoice').value = SEL.voice; }
+  refreshVoices();
+}
+async function startPractice(fromLoop) {
+  await unlockAudio(); applySelection(); clearResultMarks();
+  if (SEL.mode === 'sing' && $('recOn').checked && !fromLoop) {
+    $('loop').checked = false;
+    try { await recStart(); } catch (e) { showRecMsg('Das Mikrofon konnte nicht gestartet werden. Bitte den Zugriff erlauben (Safari: „aA“ → Website-Einstellungen → Mikrofon). Es geht jetzt ohne Aufnahme weiter.'); }
+  }
+  stop(); const L = loopRange(); startPosSec = L ? L[0] : 0; lastSys = null; draw(startPosSec);
+  await play(true);
+}
+$('goBtn').onclick = () => startPractice(false);
+function showRecMsg(t) { const r = $('recRes'); r.hidden = false; r.innerHTML = '<p class="err" style="margin:0">' + esc(t) + '</p>'; }
+
+// ---------- Aufnahme + Auswertung ----------
+const REC = { active: false, started: false, stream: null, frames: [], chunks: [], mr: null, url: null };
+async function recStart() {
+  ensureCtx();
+  try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch {}
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true } });
+  REC.stream = stream;
+  const src = ctx.createMediaStreamSource(stream), hp = ctx.createBiquadFilter(), mute = ctx.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 60; mute.gain.value = 0;
+  REC.an = ctx.createAnalyser(); REC.an.fftSize = 2048; REC.an.smoothingTimeConstant = 0;
+  src.connect(hp); hp.connect(REC.an); REC.an.connect(mute); mute.connect(ctx.destination); // Safari braucht die Verbindung bis zum Ausgang
+  REC.buf = new Float32Array(2048); REC.ds = new Float32Array(1024); REC.frames = []; REC.chunks = []; REC.started = false;
+  if (REC.url) { URL.revokeObjectURL(REC.url); REC.url = null; }
+  try { REC.mr = new MediaRecorder(stream); REC.mr.ondataavailable = e => { if (e.data && e.data.size) REC.chunks.push(e.data); }; REC.mr.start(); } catch { REC.mr = null; }
+  REC.active = true; document.body.classList.add('recording'); REC.timer = setInterval(recFrame, 40); applyGains();
+}
+function yin(b, sr) {
+  let r = 0; for (let i = 0; i < b.length; i++) r += b[i] * b[i]; if (Math.sqrt(r / b.length) < 0.004) return null;
+  const W = b.length >> 1, tMin = Math.floor(sr / 1000), tMax = Math.min(W - 1, Math.floor(sr / 70)), d = new Float32Array(tMax + 1);
+  for (let t = 1; t <= tMax; t++) { let s = 0; for (let i = 0; i < W; i++) { const x = b[i] - b[i + t]; s += x * x; } d[t] = s; }
+  let run = 0; d[0] = 1; for (let t = 1; t <= tMax; t++) { run += d[t]; d[t] = run ? d[t] * t / run : 1; }
+  let tau = -1; for (let t = tMin; t <= tMax; t++) { if (d[t] < 0.15) { while (t < tMax && d[t + 1] < d[t]) t++; tau = t; break; } }
+  if (tau < 0) return null; let bt = tau;
+  if (tau > 1 && tau < tMax) { const a = d[tau - 1], c = d[tau], e = d[tau + 1], den = a + e - 2 * c; if (den) bt = tau + (a - e) / (2 * den); }
+  return sr / bt;
+}
+function recFrame() {
+  if (!REC.active) return;
+  REC.an.getFloatTimeDomainData(REC.buf); let sr = ctx.sampleRate, data = REC.buf;
+  if (sr > 32000) { for (let i = 0; i < REC.ds.length; i++) REC.ds[i] = (REC.buf[2 * i] + REC.buf[2 * i + 1]) * 0.5; data = REC.ds; sr /= 2; }
+  const f = yin(data, sr); REC.frames.push({ t: ctx.currentTime, m: f ? 69 + 12 * Math.log2(f / 440) : null });
+}
+async function finishTake() {
+  if (!REC.active) return;
+  REC.active = false; clearInterval(REC.timer); document.body.classList.remove('recording'); applyGains();
+  const pEnd = REC.pEnd != null ? REC.pEnd : startPosSec; REC.pEnd = null;
+  if (REC.mr && REC.mr.state !== 'inactive') { await new Promise(res => { REC.mr.onstop = res; REC.mr.stop(); }); }
+  if (REC.chunks.length) REC.url = URL.createObjectURL(new Blob(REC.chunks, { type: REC.mr && REC.mr.mimeType || 'audio/mp4' }));
+  try { REC.stream.getTracks().forEach(t => t.stop()); } catch {} REC.stream = null;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
+  setFocus(false); goStep(3);
+  if (!REC.started) { showRecMsg('Die Aufnahme wurde beendet, bevor die Musik begonnen hat.'); return; }
+  showResult(analyzeTake(SEL.voice, REC.p0, pEnd));
+}
+const median = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
+function analyzeTake(vi, p0, p1) {
+  const v = score.voices[vi], lat = (ctx.outputLatency || 0) + (ctx.baseLatency || 0) + 0.03;
+  const fr = REC.frames.map(f => ({ s: REC.p0 + (f.t - lat - REC.t0), m: f.m })).filter(f => f.s >= p0 - 0.5);
+  const voicedAll = fr.filter(f => f.m != null).length / Math.max(1, fr.length);
+  // Noten (Haltebögen zusammengefasst)
+  const groups = [];
+  v.notes.forEach((n, k) => { const prev = groups[groups.length - 1]; if (prev && v.notes[k - 1].tie && v.notes[k - 1].midi === n.midi) { prev.d = n.t + n.d - prev.t; prev.ks.push(k); } else groups.push({ t: n.t, d: n.d, midi: n.midi, lyric: n.lyric || '', ks: [k] }); });
+  const res = [];
+  groups.forEach((g, gi) => {
+    const s0 = b2s(g.t), s1 = b2s(g.t + g.d), dur = s1 - s0; if (s0 < p0 - 0.01 || s1 > p1 + 0.05) return;
+    const a = s0 + Math.min(0.25 * dur, 0.15), b = s1 - Math.min(0.15 * dur, 0.1), win = fr.filter(f => f.s >= a && f.s <= b);
+    const vo = win.filter(f => f.m != null).map(f => f.m), bar = Math.floor(g.t / BPM() + 1e-6) + 1;
+    const leap = gi > 0 ? Math.abs(g.midi - groups[gi - 1].midi) : 0;
+    if (win.length < 2 || vo.length < Math.max(2, win.length * 0.35)) { res.push({ g, bar, st: 'miss', leap }); return; }
+    let dev = (median(vo) - g.midi) * 100; dev = ((dev % 1200) + 1800) % 1200 - 600;
+    let drift = 0; if (dur >= 1.2 && vo.length >= 9) { const q = Math.floor(vo.length / 3); drift = (median(vo.slice(-q)) - median(vo.slice(0, q))) * 100; }
+    const ad = Math.abs(dev);
+    res.push({ g, bar, dev, drift, leap, st: ad <= 25 ? 'ok' : ad <= 50 ? 'mid' : 'bad' });
+  });
+  // Einsätze
+  const late = [];
+  (entries[vi] || []).forEach(e => { const es = b2s(e.t); if (es < p0 || es > p1) return;
+    const target = (v.notes.find(n => n.t >= e.t - 1e-6) || {}).midi; if (target == null) return;
+    const hit = fr.find(f => f.s >= es - 0.3 && f.s <= es + 1.5 && f.m != null && Math.abs((((f.m - target) * 100 % 1200) + 1800) % 1200 - 600) < 150);
+    if (!hit) return; const dl = hit.s - es; if (dl > 0.35) late.push({ bar: Math.floor(e.t / BPM() + 1e-6) + 1, dl, lyric: e.lyric }); });
+  return { vi, res, late, voicedAll, p0, p1 };
+}
+function clearResultMarks() { document.querySelectorAll('#notation g.note.r-ok, #notation g.note.r-mid, #notation g.note.r-bad, #notation g.note.r-miss').forEach(el => el.classList.remove('r-ok', 'r-mid', 'r-bad', 'r-miss')); }
+function showResult(A) {
+  const box = $('recRes'); box.hidden = false; const R = A.res;
+  if (!R.length) { box.innerHTML = '<p>Für eine Auswertung war die Aufnahme zu kurz. Sing mindestens ein paar Takte mit.</p>'; return; }
+  clearResultMarks(); R.forEach(r => r.g.ks.forEach(k => { const el = noteEls[A.vi] && noteEls[A.vi][k]; if (el) el.classList.add('r-' + r.st); }));
+  const sc = Math.round(R.reduce((a, r) => a + (r.st === 'ok' ? 1 : r.st === 'mid' ? 0.6 : 0), 0) / R.length * 100);
+  const sung = R.filter(r => r.st !== 'miss'), mean = sung.length ? sung.reduce((a, r) => a + r.dev, 0) / sung.length : 0;
+  // Takte zusammenfassen
+  const bars = {}; R.forEach(r => { const b = bars[r.bar] = bars[r.bar] || { n: 0, ok: 0, mid: 0, bad: 0, miss: 0, dev: [], lyr: [] }; b.n++; b[r.st]++; if (r.st !== 'miss') b.dev.push(r.dev); if (r.g.lyric) b.lyr.push(r.g.lyric); });
+  const bscore = b => (b.ok + 0.6 * b.mid) / b.n, bcls = b => b.miss > b.n / 2 ? 'b-miss' : bscore(b) >= 0.8 ? 'b-ok' : bscore(b) >= 0.5 ? 'b-mid' : 'b-bad';
+  const firstBar = Math.floor(posToBeats(A.p0) / BPM()) + 1, lastBar = Math.min(score.measures, Math.floor(posToBeats(A.p1) / BPM() - 1e-6) + 1);
+  let strip = ''; for (let m = firstBar; m <= lastBar; m++) { const b = bars[m]; strip += `<button class="${b ? bcls(b) : 'b-none'}" data-bar="${m}" title="Takt ${m}" aria-label="Takt ${m}">${m % 5 === 0 ? m : ''}</button>`; }
+  // Problemstellen: schwache Takte zu Abschnitten verbinden
+  const weak = Object.keys(bars).map(Number).sort((a, b) => a - b).filter(m => bscore(bars[m]) < 0.7);
+  const kind = m => bars[m].miss > bars[m].n / 2 ? 'miss' : 'pitch', ranges = []; weak.forEach(m => { const r = ranges[ranges.length - 1]; if (r && m - r.b <= 1 && r.k === kind(m)) r.b = m; else ranges.push({ a: m, b: m, k: kind(m) }); });
+  ranges.forEach(r => { const bs = []; for (let m = r.a; m <= r.b; m++) if (bars[m]) bs.push(bars[m]);
+    const dv = bs.flatMap(b => b.dev), md = dv.length ? dv.reduce((x, y) => x + y, 0) / dv.length : 0, miss = bs.reduce((x, b) => x + b.miss, 0), n = bs.reduce((x, b) => x + b.n, 0);
+    r.sev = bs.reduce((x, b) => x + (1 - bscore(b)) * b.n, 0); r.md = md; r.miss = miss / n; r.lyr = bs.flatMap(b => b.lyr).slice(0, 5).join(' ');
+    r.what = r.miss > 0.5 ? 'hier habe ich dich kaum gehört' : md < -25 ? `zu tief (im Schnitt ${Math.round(md)} Cent)` : md > 25 ? `zu hoch (im Schnitt +${Math.round(md)} Cent)` : 'Töne noch unsauber, mal zu hoch, mal zu tief'; });
+  ranges.sort((a, b) => b.sev - a.sev); const top = ranges.slice(0, 4);
+  // Tipps
+  const tips = [];
+  if (A.voicedAll < 0.2) tips.push('Ich konnte dich kaum hören. Halte das Handy näher, sing etwas lauter – und nimm am besten Kopfhörer, damit das Mikrofon nur dich hört.');
+  if (mean < -20) tips.push('Du singst insgesamt eher zu tief. Denk die Töne „von oben“, mach den Mund innen weit (wie beim Gähnen) und atme gut ein, bevor die Phrase beginnt.');
+  else if (mean > 20) tips.push('Du singst insgesamt eher zu hoch. Bleib locker im Hals, nicht drücken – lieber etwas leiser und entspannter singen.');
+  const leapBad = R.filter(r => r.leap >= 5 && (r.st === 'bad' || r.st === 'mid'));
+  if (leapBad.length >= 2) tips.push(`Große Tonsprünge sind noch schwierig (z. B. Takt ${[...new Set(leapBad.map(r => r.bar))].slice(0, 3).join(', ')}). Hör den Zielton vorher innerlich, spiel ihn dir mit „Töne angeben“ vor und übe die Stelle langsam in der Schleife.`);
+  const drift = R.filter(r => r.drift < -30);
+  if (drift.length >= 2) tips.push(`Lange Töne sinken am Ende ab (z. B. Takt ${[...new Set(drift.map(r => r.bar))].slice(0, 3).join(', ')}). Atme gleichmäßig weiter aus und halte die Spannung bis zum Schluss des Tons.`);
+  if (A.late.length) tips.push(`Einsätze kommen etwas spät (Takt ${A.late.slice(0, 4).map(l => l.bar).join(', ')}). Atme schon im Schlag vor dem Einsatz ein – „Einsätze vorzählen“ unter Weitere Einstellungen hilft dabei.`);
+  if (top.length) tips.push('Übe die markierten Problemstellen einzeln: Tippe unten auf „Diese Stelle üben“ – sie läuft dann in der Schleife, etwas langsamer.');
+  if (!tips.length) tips.push('Sehr sauber gesungen! Probier als Nächstes ein schnelleres Tempo oder sing ohne Markierung in den Noten.');
+  const word = sc >= 85 ? 'Super!' : sc >= 65 ? 'Gut gemacht!' : sc >= 40 ? 'Ein guter Anfang!' : 'Weiter üben – das wird!';
+  box.innerHTML = `<h3 style="margin:0 0 8px">Deine Auswertung · ${esc(score.voices[A.vi].name)}</h3>
+    <div class="rsum"><div class="rscore">${sc} %</div><div><b>${word}</b><div class="hint">${R.filter(r => r.st === 'ok').length} von ${R.length} Tönen genau getroffen · Takt ${firstBar}–${lastBar}${sung.length ? ` · Tendenz: ${Math.abs(mean) < 10 ? 'genau' : mean < 0 ? 'eher zu tief' : 'eher zu hoch'}` : ''}</div></div></div>
+    <div class="bars">${strip}</div>
+    <div class="hint">Grün = genau · Gelb = knapp daneben · Rot = ungenau · Grau = kaum gehört. Tippe auf einen Takt, um ihn zu üben. In den Noten sind deine Töne jetzt genauso eingefärbt.</div>
+    ${top.length ? '<h3 style="margin:14px 0 4px">Diese Stellen sind noch ungenau</h3>' + top.map(r => `<div class="prob"><div><b>Takt ${r.a}${r.b > r.a ? '–' + r.b : ''}:</b> ${r.what}${r.lyr ? ` <span class="hint">„${esc(r.lyr)}“</span>` : ''}</div><div><button class="smallbtn" data-la="${r.a}" data-lb="${r.b}">🔁 Diese Stelle üben</button></div></div>`).join('') : ''}
+    <h3 style="margin:14px 0 4px">Tipps</h3><ul class="tips">${tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="row" style="margin-top:10px">${REC.url ? `<audio controls src="${REC.url}" style="max-width:100%"></audio>` : ''}<button id="recAgain" class="primary">🎙 Nochmal aufnehmen</button></div>`;
+  const practice = (a, b) => { $('loop').checked = true; $('loopA').value = a; $('loopB').value = Math.max(a, b); $('recOn').checked = false;
+    const slower = [...$('tempo').options].map(o => +o.value).filter(x => x < curTempoPct).pop(); if (slower) { $('tempo3').value = slower; $('tempo3').onchange({ target: $('tempo3') }); }
+    SEL.mode = 'sing'; renderStep3(); setTimeout(() => startPractice(true), slower ? 600 : 0); };
+  box.querySelectorAll('[data-la]').forEach(b => b.onclick = () => practice(+b.dataset.la, +b.dataset.lb));
+  box.querySelectorAll('.bars button[data-bar]').forEach(b => b.onclick = () => practice(+b.dataset.bar, +b.dataset.bar));
+  $('recAgain').onclick = () => { $('loop').checked = false; $('recOn').checked = true; SEL.mode = 'sing'; renderStep3(); startPractice(false); };
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 init();
 }
