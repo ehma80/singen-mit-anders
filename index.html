@@ -87,6 +87,19 @@
   #setBtn[aria-expanded=true] { border-color:var(--acc); color:var(--acc); }
   #settings { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; display:grid; gap:12px; }
   #settings h3 { font-size:.8rem; text-transform:none; color:var(--mute); margin:0 0 4px; }
+  /* Vollbild-Notenblatt zum Üben */
+  body.focus { overflow:hidden; }
+  body.focus main > *:not(#player), body.focus #player > *:not(#noteCard):not(#fbar), body.focus #noteCard > p { display:none !important; }
+  body.focus #noteCard { position:fixed; left:0; right:0; top:0; bottom:calc(68px + env(safe-area-inset-bottom)); margin:0; border:0; border-radius:0; padding:4px; z-index:50; background:#fff; }
+  body.focus #notation { max-height:none; height:100%; border-radius:0; }
+  #fbar { position:fixed; left:0; right:0; bottom:0; z-index:51; display:flex; align-items:center; justify-content:center; gap:10px;
+          padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:var(--card); border-top:1px solid var(--line); box-shadow:0 -4px 14px rgba(0,0,0,.12); }
+  #fbar button { min-height:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; font-size:1.1rem; padding:4px 12px; }
+  #fbar button span { font-size:.7rem; color:var(--mute); }
+  #fPlay { width:56px; height:56px; min-width:56px; border-radius:50%; padding:0; }
+  #fPlay svg { width:24px; height:24px; fill:#fff; }
+  #fMeas { min-width:5.5em; text-align:center; font-size:.85rem; }
+  @media (max-width:420px) { #fbar { gap:6px; } #fbar button { padding:4px 8px; } #fMeas { min-width:4em; } }
   .brand { font-size:.8rem; font-weight:700; letter-spacing:.02em; color:var(--acc); margin-bottom:2px; }
 </style>
 </head>
@@ -134,7 +147,7 @@
         </div></div>
         <div><h3>Stimmen</h3><div class="row">
           <button id="allPiano">alle Klavier</button><button id="allSing">alle gesungen</button>
-          <span class="hint">Klang, stumm und Lautstärke je Stimme stehen jetzt unten bei den Stimmen.</span>
+          <span class="hint">Klang und Lautstärke je Stimme stehen jetzt unten bei den Stimmen.</span>
         </div></div>
         <div><h3>Start</h3><div class="row">
           <label class="small"><input type="checkbox" id="countin" checked> Einzählen (Klick, ein Takt)</label>
@@ -169,18 +182,27 @@
       <div class="legend">
         <div><b>🎤 Ich singe:</b> Deine Stimme ist stumm – du singst sie selbst. Sie läuft als Markierung in den Noten mit.</div>
         <div><b>🔊 Solo:</b> Deine Stimme ist lauter, alle anderen Stimmen sind halb so laut.</div>
+        <div><b>🔇 Stumm:</b> Diese Stimme ist ganz aus (du kannst mehrere ausschalten).</div>
         <div>Alle Stimmen werden am Klavier gespielt. Gesungen statt Klavier: unter ⚙️ Einstellungen.</div>
       </div>
       <p id="voiceInfo"></p>
+      <button class="primary" id="focusBtn" style="margin:0 0 8px">🎼 Üben im Vollbild</button>
       <div id="voices"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="noteCard">
       <div id="notation"><p class="hint" style="padding:12px">Noten werden gesetzt …</p></div>
       <p class="hint" style="margin:8px 0 0">Bei „🎤 Ich singe“ und „🔊 Solo“ wird die aktuelle Note deiner Stimme wie mit einem Textmarker markiert (abschaltbar unter ⚙️ Einstellungen). Tippe auf eine Note oder in einen Takt: Die Wiedergabe startet genau dort.</p>
     </div>
 
     <p class="hint" id="note"></p>
+    <div id="fbar" hidden>
+      <button id="fBack" aria-label="Einen Takt zurück">⏪<span>Takt zurück</span></button>
+      <button class="primary" id="fPlay" aria-label="Abspielen"></button>
+      <button id="fStop" aria-label="Stopp und zum Anfang">⏹<span>Stopp</span></button>
+      <span class="meas" id="fMeas"></span>
+      <button id="fExit" aria-label="Vollbild verlassen">✕<span>Schließen</span></button>
+    </div>
   </div>
 </main>
 <script>window.LIBRARY_MODE=true;window.UPLOAD_URL="https://github.com/ehma80/singen-mit-anders/upload/main/noten";window.ENCRYPTED=true;</script>
@@ -190,6 +212,7 @@
 let STATIC = null;
 const PLAY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>', PAUSE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>';
 const LIBMODE = !!window.LIBRARY_MODE;
+document.getElementById('fPlay').innerHTML = PLAY_SVG;
 const $ = id => document.getElementById(id);
 let score = null, ctx = null, master = null, buffers = [], gains = [], sources = [], tracks = [];
 let playing = false, startCtxTime = 0, startPosSec = 0, rafId = 0, schedTimer = 0, lastSched = 0;
@@ -406,8 +429,8 @@ function buildVoiceRows() {
       <div class="vctl">
         <button class="toggle" id="sing${i}" aria-pressed="false" title="Deine Stimme ist stumm – du singst sie selbst. Sie läuft als Markierung in den Noten mit.">🎤 Ich singe</button>
         <button class="toggle" id="solo${i}" aria-pressed="false" title="Diese Stimme lauter, alle anderen halb so laut.">🔊 Solo</button>
+        <button class="toggle" id="off${i}" aria-pressed="false" title="Diese Stimme ausschalten">🔇 Stumm</button>
         <span class="vadv">
-          <button class="toggle" id="off${i}" title="Diese Stimme stumm schalten" aria-label="${esc(v.name)} stumm">🔇</button>
           <select id="mode${i}" aria-label="Wiedergabe ${esc(v.name)}"><option value="piano" selected>Klavier</option><option value="sing">gesungen</option><option value="both">gesungen + Klavier</option></select>
           <input type="range" class="vol" id="vol${i}" min="0" max="1.5" step="0.05" value="1" aria-label="Lautstärke ${esc(v.name)}">
         </span>
@@ -429,7 +452,7 @@ function refreshVoices() {
   tracks.forEach((t, j) => {
     $('sing' + j).classList.toggle('sing', t.sing); $('sing' + j).setAttribute('aria-pressed', t.sing);
     $('solo' + j).classList.toggle('solo', t.solo); $('solo' + j).setAttribute('aria-pressed', t.solo);
-    $('off' + j).classList.toggle('on', t.off);
+    $('off' + j).classList.toggle('on', t.off); $('off' + j).setAttribute('aria-pressed', t.off);
     $('vrow' + j).classList.toggle('muted', !audible(j)); $('vrow' + j).classList.toggle('mine', t.sing || t.solo);
   });
   const si = tracks.findIndex(t => t.sing), so = tracks.findIndex(t => t.solo), vi = $('voiceInfo');
@@ -522,7 +545,8 @@ async function play(withCountIn = true) {
     s.start(when, startPosSec); return s;
   });
   startCtxTime = when; playing = true; lastSched = startPosSec;
-  $('play').textContent = '⏸ Pause'; $('cuePlay').innerHTML = PAUSE_SVG; $('cuePlay').setAttribute('aria-label', 'Pause');
+  $('play').textContent = '⏸ Pause'; $('cuePlay').innerHTML = $('fPlay').innerHTML = PAUSE_SVG; $('cuePlay').setAttribute('aria-label', 'Pause'); $('fPlay').setAttribute('aria-label', 'Pause');
+  setFocus(true);
   schedTimer = setInterval(schedulePiano, 50);
   tick();
 }
@@ -531,7 +555,7 @@ function stop() {
   startPosSec = Math.max(0, curPosSec());
   sources.forEach(s => { try { s.stop(); } catch {} }); sources = [];
   playing = false; clearInterval(schedTimer); cancelAnimationFrame(rafId);
-  $('play').textContent = '▶ Abspielen'; $('cuePlay').innerHTML = PLAY_SVG; $('cuePlay').setAttribute('aria-label', 'Abspielen');
+  $('play').textContent = '▶ Abspielen'; $('cuePlay').innerHTML = $('fPlay').innerHTML = PLAY_SVG; $('cuePlay').setAttribute('aria-label', 'Abspielen'); $('fPlay').setAttribute('aria-label', 'Abspielen');
 }
 function seekBeats(b) { const was = playing; stop(); startPosSec = b2s(Math.max(0, b)); draw(startPosSec); if (was) play(false); }
 $('play').onclick = $('cuePlay').onclick = () => playing ? stop() : play(true);
@@ -545,6 +569,17 @@ $('cueVoice').onchange = () => { cueKey = ''; draw(curPosSec()); };
 const setOthers = mode => tracks.forEach((t, i) => { if (!t.sing) { t.mode = mode; $('mode' + i).value = mode; } }) || applyGains();
 $('allSing').onclick = () => setOthers('sing');
 $('allPiano').onclick = () => setOthers('piano');
+function setFocus(on) {
+  if (document.body.classList.contains('focus') === on) return;
+  document.body.classList.toggle('focus', on); $('fbar').hidden = !on;
+  setTimeout(() => { if (score && tk) renderNotation(); }, 60);
+}
+$('focusBtn').onclick = () => setFocus(true);
+$('fExit').onclick = () => setFocus(false);
+$('fPlay').onclick = () => playing ? stop() : play(true);
+$('fStop').onclick = () => { stop(); const L = loopRange(); startPosSec = L ? L[0] : 0; lastHlBeat = -1; draw(startPosSec); };
+$('fBack').onclick = () => { const b = posToBeats(curPosSec()), bar = Math.floor(b / BPM() + 1e-6), into = b - bar * BPM(); seekBeats(Math.max(0, (into > 0.5 ? bar : bar - 1) * BPM())); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('focus')) setFocus(false); });
 $('setBtn').onclick = () => { const st = $('settings'), open = st.hidden; st.hidden = !open; document.body.classList.toggle('adv', open); $('setBtn').setAttribute('aria-expanded', open); };
 try { if (localStorage.getItem('markOn') === '0') $('markOn').checked = false; } catch {}
 $('markOn').onchange = () => { try { localStorage.setItem('markOn', $('markOn').checked ? '1' : '0'); } catch {} lastHlBeat = -1; refreshVoices(); };
@@ -847,7 +882,7 @@ function currentNote(vi, beats) {
 function draw(p) {
   const beats = posToBeats(Math.max(0, p));
   const m = Math.min(score.measures, Math.floor(beats / BPM()) + 1);
-  $('measLbl').textContent = `Takt ${m} / ${score.measures}`;
+  $('measLbl').textContent = $('fMeas').textContent = `Takt ${m} / ${score.measures}`;
   if (document.activeElement !== $('pos')) $('pos').value = 1 + beats / BPM();
   score.voices.forEach((v, i) => {
     const S = tracks[i].syl; let k = -1;
